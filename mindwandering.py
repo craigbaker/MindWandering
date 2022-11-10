@@ -19,6 +19,9 @@ import PIL.ImageFont
 import PIL.ImageTk
 
 
+app_dir = os.path.dirname(sys.argv[0])
+
+
 class MindWandering:
     def __init__(self):
         self.image_width = 800
@@ -32,20 +35,21 @@ class MindWandering:
         self.frame_t = 1. / 30
         self.frame_start = time.perf_counter()
 
-        self.root = Tk()
+        self.root = Tk(className=" MindWandering") # className is window title, initial char is lowered
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
         self.canvas = Canvas(self.root, width=self.image_width, height=self.screen_height)
         self.canvas.pack()
 
+        text = open(os.path.join(app_dir, "data/text_a.txt")).read()
+
         image = PIL.Image.new("L", (self.image_width * self.scale_multiplier, self.image_height * self.scale_multiplier), 255)# (255,255,255))
         draw = PIL.ImageDraw.Draw(image)
         fontsize = 24
-        fontpath = os.path.join(os.path.dirname(sys.argv[0]), "fonts/Merriweather/Merriweather-Black.ttf")
+        fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
         font = PIL.ImageFont.truetype(fontpath, fontsize)
         lines = textwrap.wrap(text, width=60)
-        lines_text = "\n".join(lines)
-        lines_text = "\n\n".join([lines_text] * 5)
+        lines_text = "\n\n".join(lines)
         draw.text((10, self.screen_height * self.scale_multiplier / 2.), lines_text, 0, font=font)
 
         self.image = image.resize((self.image_width, self.image_height), PIL.Image.Resampling.LANCZOS)
@@ -121,18 +125,17 @@ class MindWandering:
         self.n += self.speed
         self.n = self.n % (self.image_height - self.screen_height)
 
+        
         frame_end = time.perf_counter()
         frame_elapsed = frame_end - self.frame_start
-        frame_delay = max(0., self.frame_t - frame_elapsed)
+        frame_delay = frame_elapsed - self.frame_t
         self.frame_start = frame_end
-        #print ("elapsed:", frame_elapsed, "delay:", frame_delay)
+        #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t)
+        
 
         self.canvas.yview_moveto(self.n / self.image_height)
 
-        self.root.after(round(1000 * frame_delay), self.do_scroll)
-
-
-text = "In the study today, you read two chapters of a Bill Bryson book and completed questions regarding the task and attention questionnaires. We conducted this study to assess comprehension and mind wandering when reading text. In particular we are interested in the differences between scrolling text and static text. We appreciate you giving your time and if you have any questions please contact us."
+        self.root.after(round(1000 * (self.frame_t - frame_delay)), self.do_scroll)
 
 
 def main():
