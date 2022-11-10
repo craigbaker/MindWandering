@@ -5,6 +5,8 @@
 #  Created by Craig Baker on 10/31/2022.
 #
 
+import os
+import sys
 import time
 import textwrap
 
@@ -33,13 +35,14 @@ class MindWandering:
         self.root = Tk()
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
-        #self.canvas = Canvas(self.root, width=self.image_width, height=self.image_height)
-        #self.canvas.pack()
+        self.canvas = Canvas(self.root, width=self.image_width, height=self.screen_height)
+        self.canvas.pack()
 
         image = PIL.Image.new("L", (self.image_width * self.scale_multiplier, self.image_height * self.scale_multiplier), 255)# (255,255,255))
         draw = PIL.ImageDraw.Draw(image)
         fontsize = 24
-        font = PIL.ImageFont.truetype("fonts/Merriweather/Merriweather-Black.ttf", fontsize)
+        fontpath = os.path.join(os.path.dirname(sys.argv[0]), "fonts/Merriweather/Merriweather-Black.ttf")
+        font = PIL.ImageFont.truetype(fontpath, fontsize)
         lines = textwrap.wrap(text, width=60)
         lines_text = "\n".join(lines)
         lines_text = "\n\n".join([lines_text] * 5)
@@ -47,12 +50,10 @@ class MindWandering:
 
         self.image = image.resize((self.image_width, self.image_height), PIL.Image.Resampling.LANCZOS)
 
-        #self.do_scroll()
-        #self.root.after(1, lambda: self.do_scroll())
-        #self.root.mainloop()
-
-        self.label = Label(self.root)#, width=self.image_width, height=self.screen_height)
-        self.label.pack()
+        image = PIL.ImageTk.PhotoImage(self.image)
+        self.canvas.create_image(10, 10, anchor=NW, image=image)
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.canvas.pack()
 
         buttonframe = Frame(self.root)
         buttonframe.pack()
@@ -95,9 +96,6 @@ class MindWandering:
         self.do_scroll()
         self.root.mainloop()
 
-        #while True:
-        #    self.do_scroll()
-
 
     def increase_speed(self):
         self.speed *= 2
@@ -120,20 +118,6 @@ class MindWandering:
             self.root.after(100, self.do_scroll)
             return
 
-        #cropped_image = self.image.crop((0, n, self.image_width * self.scale_multiplier, self.screen_height * self.scale_multiplier + n))
-        cropped_image = self.image.crop((0, self.n, self.image_width, self.screen_height + self.n))
-        
-        image = PIL.ImageTk.PhotoImage(cropped_image)
-        #imagesprite = self.canvas.create_image(self.image_width / 2, self.screen_height / 2, image=image)
-        #self.canvas.update()
-
-        self.label.config(image=image)
-        self.label.image = image # otherwise image will be garbage collected
-
-        #self.root.update_idletasks()
-        #self.root.update()
-        #time.sleep(0.01)
-
         self.n += self.speed
         self.n = self.n % (self.image_height - self.screen_height)
 
@@ -143,11 +127,9 @@ class MindWandering:
         self.frame_start = frame_end
         #print ("elapsed:", frame_elapsed, "delay:", frame_delay)
 
-        self.root.after(round(1000 * frame_delay), self.do_scroll)
+        self.canvas.yview_moveto(self.n / self.image_height)
 
-        #self.root.update()
-        #if self.n % 100 == 0:
-        #    self.root.update_idletasks()
+        self.root.after(round(1000 * frame_delay), self.do_scroll)
 
 
 text = "In the study today, you read two chapters of a Bill Bryson book and completed questions regarding the task and attention questionnaires. We conducted this study to assess comprehension and mind wandering when reading text. In particular we are interested in the differences between scrolling text and static text. We appreciate you giving your time and if you have any questions please contact us."
