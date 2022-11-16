@@ -11,6 +11,7 @@ import time
 import textwrap
 import csv
 import datetime
+import random
 
 from tkinter import *
 from tkinter import ttk
@@ -36,16 +37,12 @@ class MindWandering:
         self.screen_height = 1000
         self.scale_multiplier = 1
 
-        self.user_ID = "0001"
-        self.protocol = "1"
-
         self.speed = 0.5
         self.paused = False
 
         self.frame_t = 1. / 30
 
-        self.experiment_start_t = time.perf_counter()
-        self.frame_start = self.experiment_start_t
+        self.frame_start = time.perf_counter()
 
         self.csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
         self.csv_file = None
@@ -92,7 +89,7 @@ class MindWandering:
         csv_filename = "experiment_%s.csv" % datestamp
         self.csv_path = os.path.join(default_csv_dir, csv_filename)
 
-        csv_folder_label = Label(self.root, text=default_csv_dir)
+        csv_folder_label = Label(self.main_frame, text=default_csv_dir)
         csv_folder_label.pack()
 
         def do_csv_folder_dialog():
@@ -104,7 +101,30 @@ class MindWandering:
         csv_filename_button = ttk.Button(self.main_frame, text="Select CSV folder", command=do_csv_folder_dialog)
         csv_filename_button.pack(padx=100, pady=50)
 
-        def create_csv_and_next():
+        
+        protocol_label = Label(self.main_frame, text="Select the experimental protocol. The initial choice has been randomly selected.")
+        protocol_label.pack()
+
+        protocol_options = "1", "2", "3", "4"
+        protocol_var = StringVar(self.main_frame)
+        self.protocol = random.choice(protocol_options)
+        protocol_var.set(self.protocol) # default value
+        def set_protocol():
+            self.protocol = protocol_var.get()
+        protocol_menu = OptionMenu(self.main_frame, protocol_var, protocol_options, command=set_protocol)
+        protocol_menu.pack()
+
+
+        userid_label = Label(self.main_frame, text="Enter the user_ID for this session")
+        userid_label.pack()
+        userid_var = StringVar(self.main_frame, value="0001")
+        userid_entry = Entry(self.main_frame, textvariable=userid_var)
+        userid_entry.pack()
+
+        def finish_and_next():
+            self.experiment_start_t = time.perf_counter()
+            self.user_id = userid_var.get()
+
             if os.path.exists(self.csv_path):
                 messagebox.showerror("CSV file error", "CSV file already exists: " + self.csv_path)
                 return
@@ -120,7 +140,8 @@ class MindWandering:
             self.csv_writer.writeheader()
             self.next_screen()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=create_csv_and_next)
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=finish_and_next)
         next_button.pack(padx=100, pady=50)
     
 
@@ -251,7 +272,7 @@ class MindWandering:
 
 
     def write_csv_row(self, action):
-        self.csv_writer.writerow({"user_ID": self.user_ID, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
+        self.csv_writer.writerow({"user_ID": self.user_id, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
     
 
     def increase_speed(self):
