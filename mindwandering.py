@@ -15,7 +15,7 @@ import random
 
 from tkinter import *
 from tkinter import ttk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, font
 
 import PIL.Image
 import PIL.ImageDraw
@@ -51,8 +51,7 @@ class MindWandering:
         self.root.wm_title("MindWandering")
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
-        self.main_frame = Frame(self.root)
-        self.main_frame.pack()
+        self.main_frame = None
 
         self.remaining_screens = [self.run_experimenter_selections,
             self.run_wait_begin,
@@ -69,9 +68,17 @@ class MindWandering:
 
 
     def next_screen(self):
-        self.main_frame.destroy() # destroy all the widgets from the previous screen
+        '''
+        Move on to the next screen in remaining_screens
+        '''
+        if self.main_frame is not None:
+            self.main_frame.destroy() # destroy all the widgets from the previous screen
         self.main_frame = Frame(self.root)
-        self.main_frame.pack()
+        self.main_frame.pack(fill=BOTH, padx=30, pady=30)
+        for n in range(10):
+            self.main_frame.grid_rowconfigure(n, minsize=50)
+            self.main_frame.grid_columnconfigure(n, minsize=10)
+
         if len(self.remaining_screens) > 0:
             next_fn = self.remaining_screens.pop(0)
             next_fn()
@@ -89,37 +96,49 @@ class MindWandering:
         csv_filename = "experiment_%s.csv" % datestamp
         self.csv_path = os.path.join(default_csv_dir, csv_filename)
 
-        csv_folder_label = Label(self.main_frame, text=default_csv_dir)
-        csv_folder_label.pack()
+        bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
+            weight=font.BOLD)
+
+        csv_frame = Frame(self.main_frame)
+        csv_frame.pack(anchor=W, fill=BOTH, pady=30)
+        
+        csv_instructions_label = Label(csv_frame, font=bold_font, text="Choose destination folder for the CSV")
+        csv_instructions_label.grid(row=0, column=0, sticky=W)
+        csv_folder_label = Label(csv_frame, text="Current selection: " + default_csv_dir)
+        csv_folder_label.grid(row=1, column=1, sticky=W, padx=0)
+
 
         def do_csv_folder_dialog():
-            csv_dir = filedialog.askdirectory(title="Choose destination folder for CSV", initialdir=default_csv_dir)
+            csv_dir = filedialog.askdirectory(title="Choose destination folder for the CSV", initialdir=default_csv_dir)
             if csv_dir != "":
                 self.csv_path = os.path.join(csv_dir, csv_filename)
-                csv_folder_label.config(text=csv_dir)
+                csv_folder_label.config(text="Current selection: " + csv_dir)
 
-        csv_filename_button = ttk.Button(self.main_frame, text="Select CSV folder", command=do_csv_folder_dialog)
-        csv_filename_button.pack(padx=100, pady=50)
+        csv_filename_button = ttk.Button(csv_frame, text="Select CSV folder", command=do_csv_folder_dialog)
+        csv_filename_button.grid(row=1, column=0, sticky=W, padx=20, pady=5)
 
-        
-        protocol_label = Label(self.main_frame, text="Select the experimental protocol. The initial choice has been randomly selected.")
-        protocol_label.pack()
+        protocol_frame = Frame(self.main_frame)
+        protocol_frame.pack(anchor=W, fill=BOTH, pady=30)
+        protocol_label = Label(protocol_frame, font=bold_font, text="Select the experimental protocol. The initial choice has been randomly selected.")
+        protocol_label.grid(row=0, column=0, sticky=W)
 
         protocol_options = "1", "2", "3", "4"
-        protocol_var = StringVar(self.main_frame)
+        protocol_var = StringVar(protocol_frame)
         self.protocol = random.choice(protocol_options)
         protocol_var.set(self.protocol) # default value
         def set_protocol():
             self.protocol = protocol_var.get()
-        protocol_menu = OptionMenu(self.main_frame, protocol_var, protocol_options, command=set_protocol)
-        protocol_menu.pack()
+        protocol_menu = OptionMenu(protocol_frame, protocol_var, *protocol_options, command=set_protocol)
+        protocol_menu.grid(row=1, column=0, sticky=W, padx=30)
 
 
-        userid_label = Label(self.main_frame, text="Enter the user_ID for this session")
-        userid_label.pack()
-        userid_var = StringVar(self.main_frame, value="0001")
-        userid_entry = Entry(self.main_frame, textvariable=userid_var)
-        userid_entry.pack()
+        userid_frame = Frame(self.main_frame)
+        userid_frame.pack(anchor=W, fill=BOTH, pady=30)
+        userid_label = Label(userid_frame, font=bold_font, text="Enter the user_ID for this session")
+        userid_label.grid(row=0, column=0, sticky=W)
+        userid_var = StringVar(userid_frame, value="0001")
+        userid_entry = Entry(userid_frame, textvariable=userid_var)
+        userid_entry.grid(row=1, column=0, sticky=W, padx=20)
 
         def finish_and_next():
             self.experiment_start_t = time.perf_counter()
@@ -141,8 +160,8 @@ class MindWandering:
             self.next_screen()
 
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=finish_and_next)
-        next_button.pack(padx=100, pady=50)
+        next_button = ttk.Button(self.main_frame, text="Run experiment", command=finish_and_next)
+        next_button.pack(anchor=W, pady=20)
     
 
     def run_wait_begin(self):
@@ -151,7 +170,7 @@ class MindWandering:
         '''
         self.write_csv_row(action="started")
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+        next_button.pack()
 
 
     def run_instructions(self):
