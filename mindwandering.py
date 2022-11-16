@@ -49,11 +49,49 @@ class MindWandering:
         self.csv_file = open("/tmp/mindwandering.csv", "w", newline="")
         self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=csv_fields)
         self.csv_writer.writeheader()
-        self.write_csv_row(action="started")
 
         self.root = Tk(className=" MindWandering") # className is window title, initial char is lowered
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
+        self.run_experiment()
+
+    
+    def run_experiment(self):
+        self.run_experimenter_selections()
+        self.run_wait_begin()
+        self.run_instructions()
+        self.run_text_a()
+        self.run_break()
+        self.run_text_b()
+        self.run_comprehension_questions()
+        self.run_questionnaires()
+        self.run_debriefing()
+
+
+    def run_experimenter_selections(self):
+        '''
+        The experimenter selects the CSV location, experiment protocol, userID, etc.
+        '''
+        
+
+    def run_wait_begin(self):
+        '''
+        Wait for the subject to click the "Begin" button
+        '''
+        self.write_csv_row(action="started")
+
+
+    def run_instructions(self):
+        '''
+        Show the instructions
+        '''
+        pass
+
+
+    def run_text_a(self):
+        '''
+        Run the task for Text A
+        '''
         self.canvas = Canvas(self.root, width=self.image_width, height=self.screen_height)
         self.canvas.pack()
 
@@ -117,6 +155,41 @@ class MindWandering:
         self.root.mainloop()
 
 
+    def run_break(self):
+        '''
+        Wait for the break to be over
+        '''
+        pass
+
+
+    def run_text_b(self):
+        '''
+        Run the task for Text B
+        '''
+        pass
+
+
+    def run_comprehension_questions(self):
+        '''
+        Display the comprehension questions and record the answers
+        '''
+        pass
+
+
+    def run_questionnaires(self):
+        '''
+        Display the questionnaires and record the answers
+        '''
+        pass
+
+
+    def run_debriefing(self):
+        '''
+        Display the debriefing
+        '''
+        pass
+
+
     def write_csv_row(self, action):
         self.csv_writer.writerow({"user_ID": self.user_ID, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
     
@@ -150,7 +223,7 @@ class MindWandering:
         frame_elapsed = frame_end - self.frame_start
         frame_delay = frame_elapsed - self.frame_t
         self.frame_start = frame_end
-        #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t)
+        print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
         
 
         self.canvas.yview_moveto(self.n / self.image_height)
