@@ -29,9 +29,9 @@ app_dir = os.path.dirname(sys.argv[0])
 
 class MindWandering:
     def __init__(self):
-        self.image_width = 800
+        self.image_width = 1600
         self.image_height = 1500
-        self.screen_height = 500
+        self.screen_height = 1000
         self.scale_multiplier = 1
 
         self.user_ID = "0001"
@@ -64,7 +64,7 @@ class MindWandering:
         fontsize = 24
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
         font = PIL.ImageFont.truetype(fontpath, fontsize)
-        lines = textwrap.wrap(text, width=60)
+        lines = textwrap.wrap(text, width=117)
         lines_text = "\n\n".join(lines)
         draw.text((10, self.screen_height * self.scale_multiplier / 2.), lines_text, 0, font=font)
 
