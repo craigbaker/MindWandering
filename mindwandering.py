@@ -56,9 +56,9 @@ class MindWandering:
         self.remaining_screens = [self.run_experimenter_selections,
             self.run_wait_begin,
             self.run_instructions,
-            self.run_text_a,
+            self.run_task1,
             self.run_break,
-            self.run_text_b,
+            self.run_task2,
             self.run_comprehension_questions,
             self.run_questionnaires,
             self.run_debriefing]
@@ -85,6 +85,7 @@ class MindWandering:
         else:
             if self.csv_file is not None:
                 self.csv_file.close()
+            self.root.destroy()
 
 
     def run_experimenter_selections(self):
@@ -149,7 +150,6 @@ class MindWandering:
                 return
 
             try:
-                print ("csv path:", self.csv_path)
                 self.csv_file = open(self.csv_path, "w", newline="", buffering=1) # buffering=1 writes each line
             except Exception as e:
                 messagebox.showerror("CSV file error", "Could not create CSV file: " + str(e))
@@ -168,7 +168,9 @@ class MindWandering:
         '''
         Wait for the subject to click the "Begin" button
         '''
-        self.write_csv_row(action="started")
+        label = Label(self.main_frame, text="Wait begin")
+        label.pack()
+
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack()
 
@@ -177,18 +179,52 @@ class MindWandering:
         '''
         Show the instructions
         '''
+        self.write_csv_row(action="started")
+
+        label = Label(self.main_frame, text="Instructions")
+        label.pack()
+
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
 
-    def run_text_a(self):
+    def run_task1(self):
+        self.run_task(1)
+    def run_task2(self):
+        self.run_task(2)
+
+
+    def run_task(self, task_number):
         '''
         Run the task for Text A
         '''
+        if (task_number == 1 and self.protocol in {"1", "3"}) or (task_number == 2 and self.protocol in {"2", "4"}):
+            text_id = "a"
+        else:
+            text_id = "b"
+
+        text = open(os.path.join(app_dir, "data/text_%s.txt" % text_id)).read()
+
+        if (task_number == 1 and self.protocol in {"1", "2"}) or (task_number == 2 and self.protocol in {"3", "4"}):
+            self.do_scrolling_task(text)
+        else:
+            self.do_still_task(text)
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
+
+    
+    def do_scrolling_task(self, text):
+        '''
+        The scrolling task. First prompt to select a comfortable speed, then scroll
+        through the text, recording events in the CSV.
+        '''
+        label = Label(self.main_frame, text="scrolling task: " + text[:20])
+        label.pack()
+        return
+
         self.canvas = Canvas(self.root, width=self.image_width, height=self.screen_height)
         self.canvas.pack()
-
-        text = open(os.path.join(app_dir, "data/text_a.txt")).read()
 
         image = PIL.Image.new("L", (self.image_width * self.scale_multiplier, self.image_height * self.scale_multiplier), 255)# (255,255,255))
         draw = PIL.ImageDraw.Draw(image)
@@ -246,22 +282,22 @@ class MindWandering:
         self.n = 0
         self.do_scroll()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+
+    def do_still_task(self, text):
+        '''
+
+        '''
+        label = Label(self.main_frame, text="Still task: " + text[:20])
+        label.pack()
 
 
     def run_break(self):
         '''
         Wait for the break to be over
         '''
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+        label = Label(self.main_frame, text="Break")
+        label.pack()
 
-
-    def run_text_b(self):
-        '''
-        Run the task for Text B
-        '''
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
@@ -270,6 +306,9 @@ class MindWandering:
         '''
         Display the comprehension questions and record the answers
         '''
+        label = Label(self.main_frame, text="Comprehension questions")
+        label.pack()
+
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
@@ -278,6 +317,9 @@ class MindWandering:
         '''
         Display the questionnaires and record the answers
         '''
+        label = Label(self.main_frame, text="Questionnaires")
+        label.pack()
+
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
@@ -286,6 +328,9 @@ class MindWandering:
         '''
         Display the debriefing
         '''
+        label = Label(self.main_frame, text="Debriefing")
+        label.pack()
+
         next_button = ttk.Button(self.main_frame, text="Finished", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
