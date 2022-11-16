@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import textwrap
+import csv
 
 from tkinter import *
 from tkinter import ttk
@@ -33,11 +34,22 @@ class MindWandering:
         self.screen_height = 500
         self.scale_multiplier = 1
 
-        self.speed = 1
+        self.user_ID = "0001"
+        self.protocol = "1"
+
+        self.speed = 0.5
         self.paused = False
 
         self.frame_t = 1. / 30
-        self.frame_start = time.perf_counter()
+
+        self.experiment_start_t = time.perf_counter()
+        self.frame_start = self.experiment_start_t
+
+        csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
+        self.csv_file = open("/tmp/mindwandering.csv", "w", newline="")
+        self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=csv_fields)
+        self.csv_writer.writeheader()
+        self.write_csv_row(action="started")
 
         self.root = Tk(className=" MindWandering") # className is window title, initial char is lowered
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
@@ -104,6 +116,10 @@ class MindWandering:
         self.do_scroll()
         self.root.mainloop()
 
+
+    def write_csv_row(self, action):
+        self.csv_writer.writerow({"user_ID": self.user_ID, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
+    
 
     def increase_speed(self):
         self.speed *= 2
