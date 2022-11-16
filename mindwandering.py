@@ -19,6 +19,10 @@ import PIL.ImageFont
 import PIL.ImageTk
 
 
+#stderr_f = open("/tmp/mindwandering_stderr.txt", "w")
+#sys.stdout = stderr_f
+#sys.stderr = stderr_f
+
 app_dir = os.path.dirname(sys.argv[0])
 
 
