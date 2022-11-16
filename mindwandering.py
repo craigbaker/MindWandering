@@ -10,9 +10,11 @@ import sys
 import time
 import textwrap
 import csv
+import datetime
 
 from tkinter import *
 from tkinter import ttk
+from tkinter import filedialog, messagebox
 
 import PIL.Image
 import PIL.ImageDraw
@@ -45,47 +47,84 @@ class MindWandering:
         self.experiment_start_t = time.perf_counter()
         self.frame_start = self.experiment_start_t
 
-        csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
-        self.csv_file = open("/tmp/mindwandering.csv", "w", newline="")
-        self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=csv_fields)
-        self.csv_writer.writeheader()
+        self.csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
+        self.csv_file = None
 
-        self.root = Tk(className=" MindWandering") # className is window title, initial char is lowered
+        self.root = Tk()
+        self.root.wm_title("MindWandering")
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
-        self.run_experiment()
+        self.main_frame = Frame(self.root)
+        self.main_frame.pack()
 
-    
-    def run_experiment(self):
-        self.run_experimenter_selections()
-        self.run_wait_begin()
-        self.run_instructions()
-        self.run_text_a()
-        self.run_break()
-        self.run_text_b()
-        self.run_comprehension_questions()
-        self.run_questionnaires()
-        self.run_debriefing()
+        self.remaining_screens = [self.run_experimenter_selections,
+            self.run_wait_begin,
+            self.run_instructions,
+            self.run_text_a,
+            self.run_break,
+            self.run_text_b,
+            self.run_comprehension_questions,
+            self.run_questionnaires,
+            self.run_debriefing]
+        
+        self.next_screen()
+        self.root.mainloop()
+
+
+    def next_screen(self):
+        self.main_frame.destroy()
+        self.main_frame = Frame(self.root)
+        self.main_frame.pack()
+        if len(self.remaining_screens) > 0:
+            next_fn = self.remaining_screens.pop(0)
+            next_fn()
+        else:
+            if self.csv_file is not None:
+                self.csv_file.close()
 
 
     def run_experimenter_selections(self):
         '''
         The experimenter selects the CSV location, experiment protocol, userID, etc.
         '''
-        
+        def do_csv_filename_dialog():
+            csv_dir = filedialog.askdirectory(title="Choose destination folder for CSV", initialdir=os.path.expanduser("~"))
+            if csv_dir != "" and os.path.isdir(csv_dir):
+                datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
+                filename = "experiment_%s.csv" % datestamp
+                path = os.path.join(csv_dir, filename)
+
+                try:
+                    self.csv_file = open(path, "w", newline="", buffering=1) # buffering=1 writes each line
+                except Exception as e:
+                    messagebox.showerror("CSV file error", "Could not create CSV file: " + str(e))
+                    return
+
+                self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=self.csv_fields)
+                self.csv_writer.writeheader()
+
+        csv_filename_button = ttk.Button(self.main_frame, text="Select CSV path", command=do_csv_filename_dialog)
+        csv_filename_button.pack(padx=100, pady=50)
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
+    
 
     def run_wait_begin(self):
         '''
         Wait for the subject to click the "Begin" button
         '''
         self.write_csv_row(action="started")
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_instructions(self):
         '''
         Show the instructions
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_text_a(self):
@@ -152,42 +191,49 @@ class MindWandering:
 
         self.n = 0
         self.do_scroll()
-        self.root.mainloop()
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_break(self):
         '''
         Wait for the break to be over
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_text_b(self):
         '''
         Run the task for Text B
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_comprehension_questions(self):
         '''
         Display the comprehension questions and record the answers
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_questionnaires(self):
         '''
         Display the questionnaires and record the answers
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_debriefing(self):
         '''
         Display the debriefing
         '''
-        pass
+        next_button = ttk.Button(self.main_frame, text="Finished", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def write_csv_row(self, action):
