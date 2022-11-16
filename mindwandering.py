@@ -72,7 +72,7 @@ class MindWandering:
 
 
     def next_screen(self):
-        self.main_frame.destroy()
+        self.main_frame.destroy() # destroy all the widgets from the previous screen
         self.main_frame = Frame(self.root)
         self.main_frame.pack()
         if len(self.remaining_screens) > 0:
@@ -87,26 +87,40 @@ class MindWandering:
         '''
         The experimenter selects the CSV location, experiment protocol, userID, etc.
         '''
-        def do_csv_filename_dialog():
-            csv_dir = filedialog.askdirectory(title="Choose destination folder for CSV", initialdir=os.path.expanduser("~"))
-            if csv_dir != "" and os.path.isdir(csv_dir):
-                datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
-                filename = "experiment_%s.csv" % datestamp
-                path = os.path.join(csv_dir, filename)
+        datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
+        default_csv_dir = os.path.expanduser("~")
+        csv_filename = "experiment_%s.csv" % datestamp
+        self.csv_path = os.path.join(default_csv_dir, csv_filename)
 
-                try:
-                    self.csv_file = open(path, "w", newline="", buffering=1) # buffering=1 writes each line
-                except Exception as e:
-                    messagebox.showerror("CSV file error", "Could not create CSV file: " + str(e))
-                    return
+        csv_folder_label = Label(self.root, text=default_csv_dir)
+        csv_folder_label.pack()
 
-                self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=self.csv_fields)
-                self.csv_writer.writeheader()
+        def do_csv_folder_dialog():
+            csv_dir = filedialog.askdirectory(title="Choose destination folder for CSV", initialdir=default_csv_dir)
+            if csv_dir != "":
+                self.csv_path = os.path.join(csv_dir, csv_filename)
+                csv_folder_label.config(text=csv_dir)
 
-        csv_filename_button = ttk.Button(self.main_frame, text="Select CSV path", command=do_csv_filename_dialog)
+        csv_filename_button = ttk.Button(self.main_frame, text="Select CSV folder", command=do_csv_folder_dialog)
         csv_filename_button.pack(padx=100, pady=50)
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        def create_csv_and_next():
+            if os.path.exists(self.csv_path):
+                messagebox.showerror("CSV file error", "CSV file already exists: " + self.csv_path)
+                return
+
+            try:
+                print ("csv path:", self.csv_path)
+                self.csv_file = open(self.csv_path, "w", newline="", buffering=1) # buffering=1 writes each line
+            except Exception as e:
+                messagebox.showerror("CSV file error", "Could not create CSV file: " + str(e))
+                return
+
+            self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=self.csv_fields)
+            self.csv_writer.writeheader()
+            self.next_screen()
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=create_csv_and_next)
         next_button.pack(padx=100, pady=50)
     
 
