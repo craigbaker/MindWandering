@@ -32,17 +32,12 @@ app_dir = os.path.dirname(sys.argv[0])
 
 class MindWandering:
     def __init__(self):
-        self.image_width = 1600
+        self.image_width = 800# 1600
         self.image_height = 1500
-        self.screen_height = 1000
+        self.screen_height = 500 #1000
         self.scale_multiplier = 1
 
-        self.speed = 0.5
         self.paused = False
-
-        self.frame_t = 1. / 30
-
-        self.frame_start = time.perf_counter()
 
         self.csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
         self.csv_file = None
@@ -54,7 +49,6 @@ class MindWandering:
         self.main_frame = None
 
         self.remaining_screens = [self.run_experimenter_selections,
-            self.run_wait_begin,
             self.run_instructions,
             self.run_task1,
             self.run_break,
@@ -92,13 +86,18 @@ class MindWandering:
         '''
         The experimenter selects the CSV location, experiment protocol, userID, etc.
         '''
+        large_bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
+            weight=font.BOLD, size=24)
+        bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
+            weight=font.BOLD)
+
+        heading_label = Label(self.main_frame, font=large_bold_font, text="Experiment Settings")
+        heading_label.pack(anchor=W, pady=30)
+
         datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
         default_csv_dir = os.path.expanduser("~")
         csv_filename = "experiment_%s.csv" % datestamp
         self.csv_path = os.path.join(default_csv_dir, csv_filename)
-
-        bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
-            weight=font.BOLD)
 
         csv_frame = Frame(self.main_frame)
         csv_frame.pack(anchor=W, fill=BOTH, pady=30)
@@ -127,8 +126,8 @@ class MindWandering:
         protocol_var = StringVar(protocol_frame)
         self.protocol = random.choice(protocol_options)
         protocol_var.set(self.protocol) # default value
-        def set_protocol():
-            self.protocol = protocol_var.get()
+        def set_protocol(protocol):
+            self.protocol = protocol
         protocol_menu = OptionMenu(protocol_frame, protocol_var, *protocol_options, command=set_protocol)
         protocol_menu.grid(row=1, column=0, sticky=W, padx=30)
 
@@ -162,17 +161,6 @@ class MindWandering:
 
         next_button = ttk.Button(self.main_frame, text="Run experiment", command=finish_and_next)
         next_button.pack(anchor=W, pady=20)
-    
-
-    def run_wait_begin(self):
-        '''
-        Wait for the subject to click the "Begin" button
-        '''
-        label = Label(self.main_frame, text="Wait begin")
-        label.pack()
-
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack()
 
 
     def run_instructions(self):
@@ -198,6 +186,7 @@ class MindWandering:
         '''
         Run the task for Text A
         '''
+        print ("running task:", task_number, "protocol:", self.protocol)
         if (task_number == 1 and self.protocol in {"1", "3"}) or (task_number == 2 and self.protocol in {"2", "4"}):
             text_id = "a"
         else:
@@ -206,89 +195,110 @@ class MindWandering:
         text = open(os.path.join(app_dir, "data/text_%s.txt" % text_id)).read()
 
         if (task_number == 1 and self.protocol in {"1", "2"}) or (task_number == 2 and self.protocol in {"3", "4"}):
-            self.do_scrolling_task(text)
-        else:
             self.do_still_task(text)
-
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+        else:
+            self.do_scrolling_task(text, "example text")
 
     
-    def do_scrolling_task(self, text):
+    def do_scrolling_task(self, main_text, example_text):
         '''
         The scrolling task. First prompt to select a comfortable speed, then scroll
         through the text, recording events in the CSV.
         '''
-        label = Label(self.main_frame, text="scrolling task: " + text[:20])
-        label.pack()
+        print ("scrolling task")
+
+        self.main_frame.bind("<space>", lambda e: self.pause())
+        self.main_frame.bind("c", lambda e: self.unpause())
+
+        def do_select():
+            instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
+            instructions.pack(pady=10)
+
+            example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
+            
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier)
+            scrolling_canvas.pack(fill=BOTH)
+
+            buttonframe = Frame(self.main_frame)
+            self.make_arrow_button("left", buttonframe, scrolling_canvas)
+            select_button = ttk.Button(buttonframe, text="Select", command=do_reset)
+            select_button.pack(side=LEFT, padx=10)
+            self.make_arrow_button("right", buttonframe, scrolling_canvas)
+            buttonframe.pack(pady=10)
+
+            scrolling_canvas.do_scroll()
+
+        def do_reset():
+            print ("do_reset")
+
+        def do_select_done():
+            pass
+
+        def do_instructions():
+            pass
+
+        def do_task():
+            pass
+
+        do_select()
+
         return
 
-        self.canvas = Canvas(self.root, width=self.image_width, height=self.screen_height)
-        self.canvas.pack()
 
-        image = PIL.Image.new("L", (self.image_width * self.scale_multiplier, self.image_height * self.scale_multiplier), 255)# (255,255,255))
-        draw = PIL.ImageDraw.Draw(image)
-        fontsize = 24
-        fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
-        font = PIL.ImageFont.truetype(fontpath, fontsize)
-        lines = textwrap.wrap(text, width=117)
-        lines_text = "\n\n".join(lines)
-        draw.text((10, self.screen_height * self.scale_multiplier / 2.), lines_text, 0, font=font)
-
-        self.image = image.resize((self.image_width, self.image_height), PIL.Image.Resampling.LANCZOS)
-
-        image = PIL.ImageTk.PhotoImage(self.image)
-        self.canvas.create_image(10, 10, anchor=NW, image=image)
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        self.canvas.pack()
-
-        buttonframe = Frame(self.root)
-        buttonframe.pack()
+    def make_arrow_button(self, direction, parent, scrolling_canvas):
+        '''
+        direction: "left" or "right"
+        '''
+        if direction == "left":
+            sticky = "nswe"
+            command = scrolling_canvas.decrease_scrolling_speed
+        else:
+            sticky = "nsew"
+            command = scrolling_canvas.increase_scrolling_speed
 
         style = ttk.Style()
         style.layout(
-            'Left.TButton',[
+            '%s.TButton' % direction.capitalize(),[
                 ('Button.focus', {'children': [
-                    ('Button.leftarrow', None),
-                    ('Button.padding', {'sticky': 'nswe', 'children': [
-                        ('Button.label', {'sticky': 'nswe'}
-                         )]}
-                     )]}
-                 )]
+                    ('Button.%sarrow' % direction, None),
+                    ('Button.padding', {'sticky': sticky, 'children': [
+                        ('Button.label', {'sticky': sticky}
+                        )]}
+                    )]}
+                )]
             )
-        style.configure('Left.TButton',font=('','40','bold'), width=1, arrowcolor='black')
-        self.lbutton = ttk.Button(buttonframe, style='Left.TButton', text='', command=self.decrease_speed)
-        self.lbutton.pack(side=LEFT)
-        #self.lbutton.grid(column=2)
+        style.configure('%s.TButton' % direction.capitalize(), font=('','40','bold'), width=1, arrowcolor='black')
+        button = ttk.Button(parent, style='%s.TButton' % direction.capitalize(), text='', command=command)
+        button.pack(side=LEFT)
+        return button
 
+        '''
         style.layout(
             'Right.TButton',[
                 ('Button.focus', {'children': [
                     ('Button.rightarrow', None),
                     ('Button.padding', {'sticky': 'nswe', 'children': [
                         ('Button.label', {'sticky': 'nsew'}
-                         )]}
-                     )]}
-                 )]
+                        )]}
+                    )]}
+                )]
             )
         style.configure('Right.TButton',font=('','40','bold'), width=1, arrowcolor='black')
         self.rbutton = ttk.Button(buttonframe, style='Right.TButton', text='', command=self.increase_speed)
         self.rbutton.pack(side=LEFT)
-        #self.rbutton.grid(column=3)
+        '''
 
-        self.root.bind("<space>", lambda e: self.pause())
-        self.root.bind("c", lambda e: self.unpause())
-
-        self.n = 0
-        self.do_scroll()
 
 
     def do_still_task(self, text):
         '''
 
         '''
-        label = Label(self.main_frame, text="Still task: " + text[:20])
+        label = Label(self.main_frame, text="Still task: " + text[:40] + "...")
         label.pack()
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button.pack(padx=100, pady=50)
 
 
     def run_break(self):
@@ -337,13 +347,64 @@ class MindWandering:
 
     def write_csv_row(self, action):
         self.csv_writer.writerow({"user_ID": self.user_id, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
+
+
+class ScrollingCanvas:
+    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier):
+            self.parent_widget = parent_widget
+            self.image_height = image_height
+            self.screen_height = screen_height
+            self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
+
+            image = PIL.Image.new("L", (image_width * scale_multiplier, image_height * scale_multiplier), 255)# (255,255,255))
+            draw = PIL.ImageDraw.Draw(image)
+            fontsize = 24
+            fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
+            font = PIL.ImageFont.truetype(fontpath, fontsize)
+            lines = textwrap.wrap(text, width=117)
+            lines_text = "\n\n".join(lines)
+            draw.text((10, screen_height * scale_multiplier / 2.), lines_text, 0, font=font)
+
+            self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
+
+            self.photo_image = PIL.ImageTk.PhotoImage(self.image)
+            self.canvas.create_image(10, 10, anchor=NW, image=self.photo_image)
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+            self.n = 0
+            self.paused = False
+            self.speed = 0.5
+            self.frame_start = time.perf_counter()
+            self.frame_t = 1. / 30
+
+
+    def pack(self, *args, **kwargs):
+            self.canvas.pack(*args, **kwargs)
     
 
-    def increase_speed(self):
+    def do_scroll(self):
+        if self.paused:
+            self.parent_widget.after(100, self.do_scroll)
+            return
+
+        self.n += self.speed
+        self.n = self.n % (self.image_height - self.screen_height)
+
+        frame_end = time.perf_counter()
+        frame_elapsed = frame_end - self.frame_start
+        frame_delay = frame_elapsed - self.frame_t
+        self.frame_start = frame_end
+        #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
+        
+        self.canvas.yview_moveto(self.n / self.image_height)
+        self.parent_widget.after(round(1000 * (self.frame_t - frame_delay)), self.do_scroll)
+
+
+    def increase_scrolling_speed(self):
         self.speed *= 2
 
     
-    def decrease_speed(self):
+    def decrease_scrolling_speed(self):
         self.speed /= 2
 
 
@@ -353,27 +414,6 @@ class MindWandering:
 
     def unpause(self):
         self.paused = False
-    
-
-    def do_scroll(self):
-        if self.paused:
-            self.root.after(100, self.do_scroll)
-            return
-
-        self.n += self.speed
-        self.n = self.n % (self.image_height - self.screen_height)
-
-        
-        frame_end = time.perf_counter()
-        frame_elapsed = frame_end - self.frame_start
-        frame_delay = frame_elapsed - self.frame_t
-        self.frame_start = frame_end
-        print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
-        
-
-        self.canvas.yview_moveto(self.n / self.image_height)
-
-        self.root.after(round(1000 * (self.frame_t - frame_delay)), self.do_scroll)
 
 
 def main():
