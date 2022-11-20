@@ -65,13 +65,7 @@ class MindWandering:
         '''
         Move on to the next screen in remaining_screens
         '''
-        if self.main_frame is not None:
-            self.main_frame.destroy() # destroy all the widgets from the previous screen
-        self.main_frame = Frame(self.root)
-        self.main_frame.pack(fill=BOTH, padx=30, pady=30)
-        for n in range(10):
-            self.main_frame.grid_rowconfigure(n, minsize=50)
-            self.main_frame.grid_columnconfigure(n, minsize=10)
+        self.clear_main_frame()
 
         if len(self.remaining_screens) > 0:
             next_fn = self.remaining_screens.pop(0)
@@ -80,6 +74,16 @@ class MindWandering:
             if self.csv_file is not None:
                 self.csv_file.close()
             self.root.destroy()
+
+    
+    def clear_main_frame(self):
+        if self.main_frame is not None:
+            self.main_frame.destroy() # destroy all the widgets from the previous screen
+        self.main_frame = Frame(self.root)
+        self.main_frame.pack(fill=BOTH, padx=30, pady=30)
+        for n in range(10):
+            self.main_frame.grid_rowconfigure(n, minsize=50)
+            self.main_frame.grid_columnconfigure(n, minsize=10)
 
 
     def run_experimenter_selections(self):
@@ -207,9 +211,6 @@ class MindWandering:
         '''
         print ("scrolling task")
 
-        self.main_frame.bind("<space>", lambda e: self.pause())
-        self.main_frame.bind("c", lambda e: self.unpause())
-
         def do_select():
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
@@ -221,24 +222,65 @@ class MindWandering:
 
             buttonframe = Frame(self.main_frame)
             self.make_arrow_button("left", buttonframe, scrolling_canvas)
-            select_button = ttk.Button(buttonframe, text="Select", command=do_reset)
+            select_button = ttk.Button(buttonframe, text="Select", command=do_confirm)
             select_button.pack(side=LEFT, padx=10)
             self.make_arrow_button("right", buttonframe, scrolling_canvas)
             buttonframe.pack(pady=10)
 
             scrolling_canvas.do_scroll()
 
+        def do_confirm():
+            self.clear_main_frame()
+
+            instructions = Label(self.main_frame, text="We would now like you to briefly read this example text to confirm this is your preferred speed.")
+            instructions.pack(pady=10)
+
+            example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
+
+            def confirm_command():
+                instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.")
+
+                buttonframe = Frame(self.main_frame)
+                reset_button = ttk.Button(buttonframe, text="Reset", command=do_reset)
+                reset_button.pack(side=LEFT, padx=10)
+                next_button = ttk.Button(buttonframe, text="Next", command=do_instructions)
+                next_button.pack(side=LEFT, padx=10)
+                buttonframe.pack(pady=10)
+            
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier)
+            scrolling_canvas.pack(fill=BOTH)
+
+            scrolling_canvas.do_scroll()
+            #confirm_wait_time = 30 * 1000
+            confirm_wait_time = 5 * 1000
+            self.root.after(confirm_wait_time, confirm_command)
+
         def do_reset():
             print ("do_reset")
-
-        def do_select_done():
-            pass
+            self.clear_main_frame()
+            do_select()
 
         def do_instructions():
-            pass
+            self.clear_main_frame()
+            
+            label = Label(self.main_frame, text="Instruction Screen for Scrolling Reading Task")
+            label.pack()
+
+            next_button = ttk.Button(self.main_frame, text="Next", command=do_task)
+            next_button.pack(padx=100, pady=50)
 
         def do_task():
-            pass
+            self.clear_main_frame()
+            instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
+            instructions.pack(pady=10)
+            
+            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, done_command=self.next_screen)
+
+            self.root.bind("<space>", lambda e: scrolling_canvas.pause())
+            self.root.bind("c", lambda e: scrolling_canvas.unpause())
+
+            scrolling_canvas.pack(fill=BOTH)
+            scrolling_canvas.do_scroll()
 
         do_select()
 
@@ -350,8 +392,9 @@ class MindWandering:
 
 
 class ScrollingCanvas:
-    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier):
+    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier, done_command=None):
             self.parent_widget = parent_widget
+            self.done_command = done_command
             self.image_height = image_height
             self.screen_height = screen_height
             self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
@@ -388,7 +431,12 @@ class ScrollingCanvas:
             return
 
         self.n += self.speed
-        self.n = self.n % (self.image_height - self.screen_height)
+        if self.n > self.image_height - self.screen_height:
+            if self.done_command is not None:
+                self.done_command()
+                return
+            else:
+                self.n = 0
 
         frame_end = time.perf_counter()
         frame_elapsed = frame_end - self.frame_start
