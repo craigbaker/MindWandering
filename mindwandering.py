@@ -196,15 +196,13 @@ class MindWandering:
         else:
             text_id = "b"
 
-        text = open(os.path.join(app_dir, "data/text_%s.txt" % text_id)).read()
-
         if (task_number == 1 and self.protocol in {"1", "2"}) or (task_number == 2 and self.protocol in {"3", "4"}):
-            self.do_still_task(text)
+            self.do_still_task(text_id)
         else:
-            self.do_scrolling_task(text, "example text")
+            self.do_scrolling_task(text_id)
 
     
-    def do_scrolling_task(self, main_text, example_text):
+    def do_scrolling_task(self, main_text_id):
         '''
         The scrolling task. First prompt to select a comfortable speed, then scroll
         through the text, recording events in the CSV.
@@ -216,13 +214,20 @@ class MindWandering:
             instructions.pack(pady=10)
 
             example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
+
+            speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier)
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, speed_options=speed_options, speed_selection_idx=3)
             scrolling_canvas.pack(fill=BOTH)
+
+            def do_select():
+                self.selected_speed = scrolling_canvas.speed
+                self.write_csv_row(action="select", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
+                do_confirm()
 
             buttonframe = Frame(self.main_frame)
             self.make_arrow_button("left", buttonframe, scrolling_canvas)
-            select_button = ttk.Button(buttonframe, text="Select", command=do_confirm)
+            select_button = ttk.Button(buttonframe, text="Select", command=do_select)
             select_button.pack(side=LEFT, padx=10)
             self.make_arrow_button("right", buttonframe, scrolling_canvas)
             buttonframe.pack(pady=10)
@@ -247,7 +252,7 @@ class MindWandering:
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier)
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, speed_options=[self.selected_speed])
             scrolling_canvas.pack(fill=BOTH)
 
             scrolling_canvas.do_scroll()
@@ -261,6 +266,8 @@ class MindWandering:
             do_select()
 
         def do_instructions():
+            self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
+
             self.clear_main_frame()
             
             label = Label(self.main_frame, text="Instruction Screen for Scrolling Reading Task")
@@ -273,14 +280,26 @@ class MindWandering:
             self.clear_main_frame()
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
-            
-            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, done_command=self.next_screen)
 
-            self.root.bind("<space>", lambda e: scrolling_canvas.pause())
-            self.root.bind("c", lambda e: scrolling_canvas.unpause())
+            main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id)).read()
+            
+            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, done_command=self.next_screen, speed_options=[self.selected_speed])
+
+            def pause_fn(event):
+                scrolling_canvas.pause()
+                self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+
+            def unpause_fn(event):
+                scrolling_canvas.unpause()
+                self.write_csv_row(action="unpause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+
+            self.root.bind("<space>", pause_fn)
+            self.root.bind("c", unpause_fn)
 
             scrolling_canvas.pack(fill=BOTH)
             scrolling_canvas.do_scroll()
+
+            self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
         do_select()
 
@@ -313,23 +332,6 @@ class MindWandering:
         button = ttk.Button(parent, style='%s.TButton' % direction.capitalize(), text='', command=command)
         button.pack(side=LEFT)
         return button
-
-        '''
-        style.layout(
-            'Right.TButton',[
-                ('Button.focus', {'children': [
-                    ('Button.rightarrow', None),
-                    ('Button.padding', {'sticky': 'nswe', 'children': [
-                        ('Button.label', {'sticky': 'nsew'}
-                        )]}
-                    )]}
-                )]
-            )
-        style.configure('Right.TButton',font=('','40','bold'), width=1, arrowcolor='black')
-        self.rbutton = ttk.Button(buttonframe, style='Right.TButton', text='', command=self.increase_speed)
-        self.rbutton.pack(side=LEFT)
-        '''
-
 
 
     def do_still_task(self, text):
@@ -387,14 +389,21 @@ class MindWandering:
         next_button.pack(padx=100, pady=50)
 
 
-    def write_csv_row(self, action):
-        self.csv_writer.writerow({"user_ID": self.user_id, "protocol": self.protocol, "timestamp": "%09d" % int(time.perf_counter() - self.experiment_start_t), "action": action})
+    def write_csv_row(self, action, **row_dict):
+        row_dict["user_ID"] = self.user_id
+        row_dict["protocol"] = self.protocol
+        row_dict["timestamp"] = "%09d" % int(time.perf_counter() - self.experiment_start_t)
+        row_dict["action"] = action
+
+        self.csv_writer.writerow(row_dict)
 
 
 class ScrollingCanvas:
-    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier, done_command=None):
+    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier, speed_options, speed_selection_idx=0, done_command=None):
             self.parent_widget = parent_widget
             self.done_command = done_command
+            self.speed_options = speed_options
+            self.speed_selection_idx = speed_selection_idx
             self.image_height = image_height
             self.screen_height = screen_height
             self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
@@ -416,7 +425,7 @@ class ScrollingCanvas:
 
             self.n = 0
             self.paused = False
-            self.speed = 0.5
+            self.speed = self.speed_options[self.speed_selection_idx]
             self.frame_start = time.perf_counter()
             self.frame_t = 1. / 30
 
@@ -430,7 +439,7 @@ class ScrollingCanvas:
             self.parent_widget.after(100, self.do_scroll)
             return
 
-        self.n += self.speed
+        self.n += self.speed / 200.
         if self.n > self.image_height - self.screen_height:
             if self.done_command is not None:
                 self.done_command()
@@ -449,11 +458,18 @@ class ScrollingCanvas:
 
 
     def increase_scrolling_speed(self):
-        self.speed *= 2
+        assert self.speed_options is not None
+        if self.speed_selection_idx < len(self.speed_options) - 1:
+            self.speed_selection_idx += 1
+            self.speed = self.speed_options[self.speed_selection_idx]
+        #self.speed *= 2
 
     
     def decrease_scrolling_speed(self):
-        self.speed /= 2
+        assert self.speed_options is not None
+        if self.speed_selection_idx > 0:
+            self.speed_selection_idx -= 1
+            self.speed = self.speed_options[self.speed_selection_idx]
 
 
     def pause(self):
