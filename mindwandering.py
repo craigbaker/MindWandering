@@ -5,6 +5,11 @@
 #  Created by Craig Baker on 10/31/2022.
 #
 
+import sys
+#stderr_f = open("/tmp/mindwandering_stderr.txt", "w") # find launch bugs
+#sys.stdout = stderr_f
+#sys.stderr = stderr_f
+
 import os
 import sys
 import time
@@ -23,10 +28,6 @@ import PIL.ImageDraw
 import PIL.ImageFont
 import PIL.ImageTk
 
-
-#stderr_f = open("/tmp/mindwandering_stderr.txt", "w")
-#sys.stdout = stderr_f
-#sys.stderr = stderr_f
 
 app_dir = os.path.dirname(sys.argv[0])
 
@@ -88,7 +89,6 @@ class MindWandering:
         label.pack()
         next_button = ttk.Button(self.main_frame, text="Next", command=command)
         next_button.pack(padx=100, pady=50)
-        print ("do simple next:", instructions)
 
     
     def clear_main_frame(self):
@@ -235,7 +235,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
+            example_text = open(os.path.join(app_dir, "data/text_option1.txt"), encoding="utf-8").read()
 
             speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
 
@@ -262,7 +262,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="We would now like you to briefly read this example text to confirm this is your preferred speed.")
             instructions.pack(pady=10)
 
-            example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
+            example_text = open(os.path.join(app_dir, "data/text_option1.txt"), encoding="utf-8").read()
 
             def confirm_command():
                 instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.")
@@ -287,6 +287,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             do_select()
 
         def do_instructions():
+            self.clear_main_frame()
             self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
             instructions = ['''Thank you for selecting your speed, you will now begin the reading tasks.
@@ -301,7 +302,6 @@ To begin, click next.'''
 
             command = do_task
             for inst in instructions[::-1]:
-                print ("inst:", inst)
                 command = functools.partial(self.do_simple_next, inst, command)
             command()
 
@@ -311,7 +311,7 @@ To begin, click next.'''
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
 
-            main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id)).read()
+            main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id), encoding="utf-8").read()
             
             scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, done_command=self.next_screen, speed_options=[self.selected_speed])
 
@@ -441,6 +441,7 @@ class ScrollingCanvas:
             lines = textwrap.wrap(text, width=max_chars_per_line)
             lines_text = "\n\n".join(lines)
 
+            print ("scratch")
             # Use a scratch image to determine the text height
             image = PIL.Image.new("RGBA", (1,1))
             draw = PIL.ImageDraw.Draw(image)
@@ -459,13 +460,18 @@ class ScrollingCanvas:
             image_height += int(1.5 * screen_height * scale_multiplier)
             self.image_height = image_height
 
-            image = PIL.Image.new("L", (image_width, image_height), 255)
-            draw = PIL.ImageDraw.Draw(image)
+            print ("image")
+            self.image = PIL.Image.new("L", (image_width, image_height), 255)
+            draw = PIL.ImageDraw.Draw(self.image)
             draw.text((10, screen_height * scale_multiplier / 2.), lines_text, 0, font=font)
 
-            self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
+            if scale_multiplier != 1.:
+                print ("resize")
+                self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
 
+            print ("photoimage")
             self.photo_image = PIL.ImageTk.PhotoImage(self.image)
+            print ("create_image")
             self.canvas.create_image(10, 10, anchor=NW, image=self.photo_image)
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
