@@ -12,6 +12,7 @@ import textwrap
 import csv
 import datetime
 import random
+import functools
 
 from tkinter import *
 from tkinter import ttk
@@ -32,12 +33,14 @@ app_dir = os.path.dirname(sys.argv[0])
 
 class MindWandering:
     def __init__(self):
-        self.image_width = 800# 1600
+        self.image_width = 1300 # 1600
         self.image_height = 1500
-        self.screen_height = 500 #1000
+        self.screen_height = 700
         self.scale_multiplier = 1
 
-        self.paused = False
+        fontsize = 24
+        fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
+        self.font = PIL.ImageFont.truetype(fontpath, fontsize)
 
         self.csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
         self.csv_file = None
@@ -75,6 +78,18 @@ class MindWandering:
                 self.csv_file.close()
             self.root.destroy()
 
+
+    def do_simple_next(self, instructions, command):
+        '''
+        Show the instructions, with a "Next" button
+        '''
+        self.clear_main_frame()
+        label = Label(self.main_frame, text=instructions)
+        label.pack()
+        next_button = ttk.Button(self.main_frame, text="Next", command=command)
+        next_button.pack(padx=100, pady=50)
+        print ("do simple next:", instructions)
+
     
     def clear_main_frame(self):
         if self.main_frame is not None:
@@ -110,7 +125,6 @@ class MindWandering:
         csv_instructions_label.grid(row=0, column=0, sticky=W)
         csv_folder_label = Label(csv_frame, text="Current selection: " + default_csv_dir)
         csv_folder_label.grid(row=1, column=1, sticky=W, padx=0)
-
 
         def do_csv_folder_dialog():
             csv_dir = filedialog.askdirectory(title="Choose destination folder for the CSV", initialdir=default_csv_dir)
@@ -173,7 +187,9 @@ class MindWandering:
         '''
         self.write_csv_row(action="started")
 
-        label = Label(self.main_frame, text="Instructions")
+        label = Label(self.main_frame, text='''Welcome to the Reading Comprehension Study, where we are interested in how individuals process and comprehend content when reading.
+
+You can end the experiment at any time by alerting the researcher.''')
         label.pack()
 
         next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
@@ -190,7 +206,6 @@ class MindWandering:
         '''
         Run the task for Text A
         '''
-        print ("running task:", task_number, "protocol:", self.protocol)
         if (task_number == 1 and self.protocol in {"1", "3"}) or (task_number == 2 and self.protocol in {"2", "4"}):
             text_id = "a"
         else:
@@ -207,17 +222,24 @@ class MindWandering:
         The scrolling task. First prompt to select a comfortable speed, then scroll
         through the text, recording events in the CSV.
         '''
-        print ("scrolling task")
+
+        def do_introduction():
+            intro = '''
+The text you will read, will be scrolling from the bottom to the top of the page.
+
+Before you begin, you will set the speed of the scrolling text. Try to choose the speed that would be most comfortable to continuously read for the duration of the task.'''
+            self.do_simple_next(intro, do_select)
 
         def do_select():
+            self.clear_main_frame()
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
             example_text = open(os.path.join(app_dir, "data/text_option1.txt")).read()
 
             speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
-            
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, speed_options=speed_options, speed_selection_idx=3)
+
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, speed_options=speed_options, speed_selection_idx=3)
             scrolling_canvas.pack(fill=BOTH)
 
             def do_select():
@@ -252,29 +274,37 @@ class MindWandering:
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, speed_options=[self.selected_speed])
+            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, speed_options=[self.selected_speed])
             scrolling_canvas.pack(fill=BOTH)
 
             scrolling_canvas.do_scroll()
-            #confirm_wait_time = 30 * 1000
-            confirm_wait_time = 5 * 1000
+            confirm_wait_time = 30 * 1000
+            #confirm_wait_time = 5 * 1000
             self.root.after(confirm_wait_time, confirm_command)
 
         def do_reset():
-            print ("do_reset")
             self.clear_main_frame()
             do_select()
 
         def do_instructions():
             self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
-            self.clear_main_frame()
-            
-            label = Label(self.main_frame, text="Instruction Screen for Scrolling Reading Task")
-            label.pack()
+            instructions = ['''Thank you for selecting your speed, you will now begin the reading tasks.
 
-            next_button = ttk.Button(self.main_frame, text="Next", command=do_task)
-            next_button.pack(padx=100, pady=50)
+Please read each text in full to be included in the study. A break will be available to you after completing the first text.''',
+                "It is possible that your mind may wander from the text, this is understandable, try to be aware of when it occurs and return your attention to the text.",
+                "If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.",
+                '''After you have finished reading the text, we will ask you some questions related to what you read.
+
+To begin, click next.'''
+            ]
+
+            command = do_task
+            for inst in instructions[::-1]:
+                print ("inst:", inst)
+                command = functools.partial(self.do_simple_next, inst, command)
+            command()
+
 
         def do_task():
             self.clear_main_frame()
@@ -283,7 +313,7 @@ class MindWandering:
 
             main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id)).read()
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.image_width, self.image_height, self.screen_height, self.scale_multiplier, done_command=self.next_screen, speed_options=[self.selected_speed])
+            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, done_command=self.next_screen, speed_options=[self.selected_speed])
 
             def pause_fn(event):
                 scrolling_canvas.pause()
@@ -301,7 +331,7 @@ class MindWandering:
 
             self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
-        do_select()
+        do_introduction()
 
         return
 
@@ -399,22 +429,38 @@ class MindWandering:
 
 
 class ScrollingCanvas:
-    def __init__(self, parent_widget, text, image_width, image_height, screen_height, scale_multiplier, speed_options, speed_selection_idx=0, done_command=None):
+    def __init__(self, parent_widget, text, font, image_width, screen_height, scale_multiplier, speed_options, speed_selection_idx=0, done_command=None):
             self.parent_widget = parent_widget
             self.done_command = done_command
             self.speed_options = speed_options
             self.speed_selection_idx = speed_selection_idx
-            self.image_height = image_height
             self.screen_height = screen_height
             self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
 
-            image = PIL.Image.new("L", (image_width * scale_multiplier, image_height * scale_multiplier), 255)# (255,255,255))
-            draw = PIL.ImageDraw.Draw(image)
-            fontsize = 24
-            fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
-            font = PIL.ImageFont.truetype(fontpath, fontsize)
-            lines = textwrap.wrap(text, width=117)
+            max_chars_per_line = 96
+            lines = textwrap.wrap(text, width=max_chars_per_line)
             lines_text = "\n\n".join(lines)
+
+            # Use a scratch image to determine the text height
+            image = PIL.Image.new("RGBA", (1,1))
+            draw = PIL.ImageDraw.Draw(image)
+            image_width, image_height = draw.textsize(lines_text, font)
+
+            # long lines seem to get cut off
+            image_width += 20
+
+            # calculations for determining scrolling speed
+            # get the number of words per vertical pixel
+            word_count = len(text.split())
+            self.words_per_vpixel = scale_multiplier * word_count / image_height
+
+            # the top of the text starts at the center of the screen (.5), and the end
+            # finishes by scrolling off the screen (1.)
+            image_height += int(1.5 * screen_height * scale_multiplier)
+            self.image_height = image_height
+
+            image = PIL.Image.new("L", (image_width, image_height), 255)
+            draw = PIL.ImageDraw.Draw(image)
             draw.text((10, screen_height * scale_multiplier / 2.), lines_text, 0, font=font)
 
             self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
@@ -427,7 +473,9 @@ class ScrollingCanvas:
             self.paused = False
             self.speed = self.speed_options[self.speed_selection_idx]
             self.frame_start = time.perf_counter()
-            self.frame_t = 1. / 30
+            self.set_rate()
+
+            self.recent_delays = []
 
 
     def pack(self, *args, **kwargs):
@@ -439,7 +487,7 @@ class ScrollingCanvas:
             self.parent_widget.after(100, self.do_scroll)
             return
 
-        self.n += self.speed / 200.
+        self.n += 1 # self.speed / 200.
         if self.n > self.image_height - self.screen_height:
             if self.done_command is not None:
                 self.done_command()
@@ -450,11 +498,17 @@ class ScrollingCanvas:
         frame_end = time.perf_counter()
         frame_elapsed = frame_end - self.frame_start
         frame_delay = frame_elapsed - self.frame_t
+        frame_delay = min(frame_delay, self.frame_t)
+        self.recent_delays.append(frame_delay)
+        mean_delay = sum(self.recent_delays) / len(self.recent_delays)
+        #print ("mean delay:", mean_delay, "frame_t:", self.frame_t)
+        if len(self.recent_delays) > 10:
+            self.recent_delays = self.recent_delays[-10:]
         self.frame_start = frame_end
         #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
         
         self.canvas.yview_moveto(self.n / self.image_height)
-        self.parent_widget.after(round(1000 * (self.frame_t - frame_delay)), self.do_scroll)
+        self.parent_widget.after(round(1000 * (self.frame_t - mean_delay)), self.do_scroll)
 
 
     def increase_scrolling_speed(self):
@@ -462,7 +516,7 @@ class ScrollingCanvas:
         if self.speed_selection_idx < len(self.speed_options) - 1:
             self.speed_selection_idx += 1
             self.speed = self.speed_options[self.speed_selection_idx]
-        #self.speed *= 2
+            self.set_rate()
 
     
     def decrease_scrolling_speed(self):
@@ -470,7 +524,12 @@ class ScrollingCanvas:
         if self.speed_selection_idx > 0:
             self.speed_selection_idx -= 1
             self.speed = self.speed_options[self.speed_selection_idx]
+            self.set_rate()
 
+
+    def set_rate(self):
+        self.frame_t = 60. * self.words_per_vpixel / self.speed
+    
 
     def pause(self):
         self.paused = True
