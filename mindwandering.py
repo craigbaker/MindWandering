@@ -79,9 +79,10 @@ class MindWandering:
         # Determine the maximum number of lines that can fit on one screen
         lines_per_screen = 8 # double-spaced lines
         text_height = 0
-        while text_height < self.screen_height:
+        text_width = None
+        while text_height < self.screen_height - 100:
             lines_per_screen += 1
-            _, text_height = get_text_image_size("\n\n".join([""] * lines_per_screen), font)
+            text_width, text_height = get_text_image_size("\n\n".join(["M" * self.max_chars_per_line] * lines_per_screen), font)
         lines_per_screen -= 1
         print ("lines per screen:", lines_per_screen)
 
@@ -94,7 +95,7 @@ class MindWandering:
                         encoding="utf-8").read()
             lines = textwrap.wrap(text, width=self.max_chars_per_line)
             wrapped_text = "\n\n".join(lines)
-            rendered_image = RenderedImage(wrapped_text, font, self.screen_height)
+            rendered_image = RenderedImage(wrapped_text, font, screen_height=self.screen_height)
             self.rendered_texts_scrolling[textid] = rendered_image
 
             if "option" not in textid:
@@ -103,7 +104,8 @@ class MindWandering:
                 pages = []
                 for start_line in range(0, line_count, lines_per_screen):
                     wrapped_text = "\n\n".join(lines[start_line: start_line + lines_per_screen])
-                    page_rendered_image = RenderedImage(wrapped_text, font)
+                    page_rendered_image = RenderedImage(wrapped_text, font, image_width=text_width, image_height=text_height)
+                    pages.append(page_rendered_image)
                 self.rendered_texts_still[textid] = pages
         print ("done preparing texts")
 
@@ -349,8 +351,6 @@ To begin, click next.'''
             self.clear_main_frame()
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
-
-            main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id), encoding="utf-8").read()
             
             scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.image_width, self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
 
@@ -403,15 +403,53 @@ To begin, click next.'''
         return button
 
 
-    def do_still_task(self, text):
+    def do_still_task(self, main_text_id):
         '''
 
         '''
-        label = Label(self.main_frame, text="Still task: " + text[:40] + "...")
-        label.pack()
+        def do_instructions():
+            self.clear_main_frame()
+            #self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+            instructions = ["The text you will read will be displayed on the screen, page by page. You can progress through the text by clicking NEXT.",
+                "It is possible that your mind may wander from the text, this is understandable, anytime this occurs, click the “mind wandered” button and then return your attention to the text.",
+                '''After you have finished reading the text, we will ask you some questions related to what you read.
+To begin, click next.''']
+
+            command = do_task
+            for inst in instructions[::-1]:
+                command = functools.partial(self.do_simple_next, inst, command)
+            command()
+
+        def do_task():
+            self.clear_main_frame()
+            instructions = Label(self.main_frame, text='You can progress through the text by clicking NEXT. If you mind wanders, click the purple button and continue reading.')
+            instructions.pack(pady=10)
+
+            paginated_canvas = PaginatedCanvas(self.main_frame, self.rendered_texts_still[main_text_id])
+            paginated_canvas.pack(fill=BOTH)
+
+            def do_next():
+                if paginated_canvas.at_last_page():
+                    self.next_screen()
+                else:
+                    paginated_canvas.next_page()
+
+            def do_mind_wandered():
+                print ("mind wandered")
+            
+            buttonframe = Frame(self.main_frame)
+            wandered_button = ttk.Button(buttonframe, text="Mind Wandered", command=do_mind_wandered)
+            wandered_button.pack(side=LEFT, padx=10)
+            next_button = ttk.Button(buttonframe, text="Next", command=do_next)
+            next_button.pack(side=LEFT, padx=10)
+            buttonframe.pack(pady=10)
+
+            #self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+
+        do_instructions()
+
+        return
 
 
     def run_break(self):
@@ -485,19 +523,23 @@ def get_text_image_size(lines_text, font):
 
     # long lines seem to get cut off
     image_width += 20
+    image_height += 20
 
     return image_width, image_height
 
 
 class RenderedImage:
-    def __init__(self, wrapped_text, font, screen_height=None):
+    def __init__(self, wrapped_text, font, image_width=None, image_height=None, screen_height=None):
         '''
         wrapped_text: a string, the text to be rendered, with newlines
         font: a PIL.ImageFont
+        image_width: a width in pixels, or None for automatic
+        image_height: a height in pixels, or None for automatic
         screen_height: an integer, the height of the scrolling screen,
             used to start the text at 1/2 screen height and end it off-screen
         '''
-        image_width, image_height = get_text_image_size(wrapped_text, font)
+        if image_width is None:
+            image_width, image_height = get_text_image_size(wrapped_text, font)
 
         # calculations for determining scrolling speed
         # get the number of words per vertical pixel
@@ -513,6 +555,7 @@ class RenderedImage:
             # the text starts at the top of the page
             start_height = 10
         
+        self.image_width = image_width
         self.image_height = image_height
 
         print ("image")
@@ -528,17 +571,62 @@ class RenderedImage:
         self.photo_image = PIL.ImageTk.PhotoImage(self.image)
 
 
+class PaginatedCanvas: # for the Still task
+    def __init__(self, parent_widget, rendered_images):
+        self.rendered_images = rendered_images
+
+        canvas_width = 0
+        canvas_height = 0
+        for im in rendered_images:
+            canvas_width = max(canvas_width, im.image_width)
+            canvas_height = max(canvas_height, im.image_height)
+
+        self.canvas = Canvas(parent_widget, width=canvas_width, height=canvas_height)
+
+        self.current_page = 0
+        self.show_current_page()
+
+    
+    def next_page(self):
+        assert not self.at_last_page()
+        self.current_page += 1
+        self.show_current_page()
+
+
+    def at_last_page(self):
+        return self.current_page == len(self.rendered_images) - 1
+
+    
+    def show_current_page(self):
+        '''
+        Show the current page
+        '''
+        self.canvas.delete("all")
+        self.canvas.create_image(10, 10, anchor=NW, image=self.rendered_images[self.current_page].photo_image)
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+
+    def pack(self, *args, **kwargs):
+            self.canvas.pack(*args, **kwargs)
+
+
 class ScrollingCanvas:
+    '''
+    A widget that scrolls an image vertically at a specific speed
+    '''
     def __init__(self, parent_widget, rendered_image, image_width, screen_height, speed_options, speed_selection_idx=0, done_command=None):
+            '''
+            speed_options: a list of speeds in wpm
+            speed_selection_idx: the initial speed selection, an index into speed_options
+            '''
             self.parent_widget = parent_widget
             self.rendered_image = rendered_image
             self.done_command = done_command
             self.speed_options = speed_options
             self.speed_selection_idx = speed_selection_idx
             self.screen_height = screen_height
-            self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
 
-            print ("create_image")
+            self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
             self.canvas.create_image(10, 10, anchor=NW, image=self.rendered_image.photo_image)
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
