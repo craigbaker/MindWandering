@@ -34,21 +34,25 @@ app_dir = os.path.dirname(sys.argv[0])
 
 class MindWandering:
     def __init__(self):
+        window_title = "MindWandering"
         self.image_width = 1300 # 1600
         self.image_height = 1500
         self.screen_height = 700
-        self.scale_multiplier = 1
 
         fontsize = 24
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
-        self.font = PIL.ImageFont.truetype(fontpath, fontsize)
+        self.max_chars_per_line = 96
+
+        ###
+
+        self.root = Tk()
+        self.root.wm_title(window_title)
+        self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
+
+        self.prepare_texts(fontpath, fontsize)
 
         self.csv_fields = ["user_ID", "protocol", "timestamp", "text_format", "text", "action", "page", "question", "correct", "speed"]
         self.csv_file = None
-
-        self.root = Tk()
-        self.root.wm_title("MindWandering")
-        self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
         self.main_frame = None
 
@@ -63,6 +67,45 @@ class MindWandering:
         
         self.next_screen()
         self.root.mainloop()
+
+    
+    def prepare_texts(self, fontpath, fontsize):
+        '''
+        Render text images for display in the scrolling and still tasks.
+        This is done early because PIL text rendering incurs a significant delay.
+        '''
+        font = PIL.ImageFont.truetype(fontpath, fontsize)
+
+        # Determine the maximum number of lines that can fit on one screen
+        lines_per_screen = 8 # double-spaced lines
+        text_height = 0
+        while text_height < self.screen_height:
+            lines_per_screen += 1
+            _, text_height = get_text_image_size("\n\n".join([""] * lines_per_screen), font)
+        lines_per_screen -= 1
+        print ("lines per screen:", lines_per_screen)
+
+        # Render the texts
+        self.rendered_texts_scrolling = {} # a single long page
+        self.rendered_texts_still = {}     # paginated into "screens"
+        for textid in "a", "b", "option1", "option2", "option3":
+            print ("textid:", textid)
+            text = open(os.path.join(app_dir, "data/text_%s.txt" % textid),
+                        encoding="utf-8").read()
+            lines = textwrap.wrap(text, width=self.max_chars_per_line)
+            wrapped_text = "\n\n".join(lines)
+            rendered_image = RenderedImage(wrapped_text, font, self.screen_height)
+            self.rendered_texts_scrolling[textid] = rendered_image
+
+            if "option" not in textid:
+                # paginated versions of the optional texts are not needed
+                line_count = len(lines)
+                pages = []
+                for start_line in range(0, line_count, lines_per_screen):
+                    wrapped_text = "\n\n".join(lines[start_line: start_line + lines_per_screen])
+                    page_rendered_image = RenderedImage(wrapped_text, font)
+                self.rendered_texts_still[textid] = pages
+        print ("done preparing texts")
 
 
     def next_screen(self):
@@ -204,7 +247,7 @@ You can end the experiment at any time by alerting the researcher.''')
 
     def run_task(self, task_number):
         '''
-        Run the task for Text A
+        Run task number 1 or 2, either still or scrolling depending on the protocol
         '''
         if (task_number == 1 and self.protocol in {"1", "3"}) or (task_number == 2 and self.protocol in {"2", "4"}):
             text_id = "a"
@@ -235,11 +278,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            example_text = open(os.path.join(app_dir, "data/text_option1.txt"), encoding="utf-8").read()
-
             speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
 
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, speed_options=speed_options, speed_selection_idx=3)
+            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=speed_options, speed_selection_idx=3)
             scrolling_canvas.pack(fill=BOTH)
 
             def do_select():
@@ -262,8 +303,6 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="We would now like you to briefly read this example text to confirm this is your preferred speed.")
             instructions.pack(pady=10)
 
-            example_text = open(os.path.join(app_dir, "data/text_option1.txt"), encoding="utf-8").read()
-
             def confirm_command():
                 instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.")
 
@@ -274,7 +313,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, example_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, speed_options=[self.selected_speed])
+            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
             scrolling_canvas.pack(fill=BOTH)
 
             scrolling_canvas.do_scroll()
@@ -313,7 +352,7 @@ To begin, click next.'''
 
             main_text = open(os.path.join(app_dir, "data/text_%s.txt" % main_text_id), encoding="utf-8").read()
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, main_text, self.font, self.image_width, self.screen_height, self.scale_multiplier, done_command=self.next_screen, speed_options=[self.selected_speed])
+            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.image_width, self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
 
             def pause_fn(event):
                 scrolling_canvas.pause()
@@ -428,51 +467,79 @@ To begin, click next.'''
         self.csv_writer.writerow(row_dict)
 
 
+def wrap_text(text, max_chars_per_line=96):
+    lines = textwrap.wrap(text, width=max_chars_per_line)
+    wrapped_text = "\n\n".join(lines)
+    return wrapped_text
+
+
+def get_text_image_size(lines_text, font):
+    '''
+    Use a scratch image to determine the rendered text dimensions in pixels
+    lines_text: a string containing newlines
+    '''
+    
+    image = PIL.Image.new("RGBA", (1,1))
+    draw = PIL.ImageDraw.Draw(image)
+    _, _, image_width, image_height = draw.textbbox((0, 0), lines_text, font) #draw.textsize(lines_text, font)
+
+    # long lines seem to get cut off
+    image_width += 20
+
+    return image_width, image_height
+
+
+class RenderedImage:
+    def __init__(self, wrapped_text, font, screen_height=None):
+        '''
+        wrapped_text: a string, the text to be rendered, with newlines
+        font: a PIL.ImageFont
+        screen_height: an integer, the height of the scrolling screen,
+            used to start the text at 1/2 screen height and end it off-screen
+        '''
+        image_width, image_height = get_text_image_size(wrapped_text, font)
+
+        # calculations for determining scrolling speed
+        # get the number of words per vertical pixel
+        word_count = len(wrapped_text.replace("\n", " ").replace("  ", " ").split())
+        self.words_per_vpixel = word_count / image_height
+
+        if screen_height is not None:
+            # the top of the text starts at the center of the screen (.5), and the end
+            # finishes by scrolling off the screen (1.)
+            image_height += int(1.5 * screen_height)
+            start_height = screen_height / 2.
+        else:
+            # the text starts at the top of the page
+            start_height = 10
+        
+        self.image_height = image_height
+
+        print ("image")
+        self.image = PIL.Image.new("L", (image_width, image_height), 255)
+        draw = PIL.ImageDraw.Draw(self.image)
+        draw.text((10, start_height), wrapped_text, 0, font=font)
+
+        #if scale_multiplier != 1.:
+        #    print ("resize")
+        #    self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
+
+        print ("photoimage")
+        self.photo_image = PIL.ImageTk.PhotoImage(self.image)
+
+
 class ScrollingCanvas:
-    def __init__(self, parent_widget, text, font, image_width, screen_height, scale_multiplier, speed_options, speed_selection_idx=0, done_command=None):
+    def __init__(self, parent_widget, rendered_image, image_width, screen_height, speed_options, speed_selection_idx=0, done_command=None):
             self.parent_widget = parent_widget
+            self.rendered_image = rendered_image
             self.done_command = done_command
             self.speed_options = speed_options
             self.speed_selection_idx = speed_selection_idx
             self.screen_height = screen_height
             self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
 
-            max_chars_per_line = 96
-            lines = textwrap.wrap(text, width=max_chars_per_line)
-            lines_text = "\n\n".join(lines)
-
-            print ("scratch")
-            # Use a scratch image to determine the text height
-            image = PIL.Image.new("RGBA", (1,1))
-            draw = PIL.ImageDraw.Draw(image)
-            image_width, image_height = draw.textsize(lines_text, font)
-
-            # long lines seem to get cut off
-            image_width += 20
-
-            # calculations for determining scrolling speed
-            # get the number of words per vertical pixel
-            word_count = len(text.split())
-            self.words_per_vpixel = scale_multiplier * word_count / image_height
-
-            # the top of the text starts at the center of the screen (.5), and the end
-            # finishes by scrolling off the screen (1.)
-            image_height += int(1.5 * screen_height * scale_multiplier)
-            self.image_height = image_height
-
-            print ("image")
-            self.image = PIL.Image.new("L", (image_width, image_height), 255)
-            draw = PIL.ImageDraw.Draw(self.image)
-            draw.text((10, screen_height * scale_multiplier / 2.), lines_text, 0, font=font)
-
-            if scale_multiplier != 1.:
-                print ("resize")
-                self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
-
-            print ("photoimage")
-            self.photo_image = PIL.ImageTk.PhotoImage(self.image)
             print ("create_image")
-            self.canvas.create_image(10, 10, anchor=NW, image=self.photo_image)
+            self.canvas.create_image(10, 10, anchor=NW, image=self.rendered_image.photo_image)
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
             self.n = 0
@@ -494,7 +561,7 @@ class ScrollingCanvas:
             return
 
         self.n += 1 # self.speed / 200.
-        if self.n > self.image_height - self.screen_height:
+        if self.n > self.rendered_image.image_height - self.screen_height:
             if self.done_command is not None:
                 self.done_command()
                 return
@@ -513,7 +580,7 @@ class ScrollingCanvas:
         self.frame_start = frame_end
         #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
         
-        self.canvas.yview_moveto(self.n / self.image_height)
+        self.canvas.yview_moveto(self.n / self.rendered_image.image_height)
         self.parent_widget.after(round(1000 * (self.frame_t - mean_delay)), self.do_scroll)
 
 
@@ -534,7 +601,7 @@ class ScrollingCanvas:
 
 
     def set_rate(self):
-        self.frame_t = 60. * self.words_per_vpixel / self.speed
+        self.frame_t = 60. * self.rendered_image.words_per_vpixel / self.speed
     
 
     def pause(self):
