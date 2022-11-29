@@ -405,7 +405,8 @@ To begin, click next.'''
 
     def do_still_task(self, main_text_id):
         '''
-
+        The still task. Display the text page by page, recording Next and Mind Wandered
+        events in the CSV.
         '''
         def do_instructions():
             self.clear_main_frame()
@@ -430,13 +431,14 @@ To begin, click next.''']
             paginated_canvas.pack(fill=BOTH)
 
             def do_next():
+                self.write_csv_row(action="next", text_format="still", text=main_text_id, page="still_text_pg%d" % (paginated_canvas.current_page + 1))
                 if paginated_canvas.at_last_page():
                     self.next_screen()
                 else:
                     paginated_canvas.next_page()
 
             def do_mind_wandered():
-                print ("mind wandered")
+                self.write_csv_row(action="mind wandered", text_format="still", text=main_text_id, page="still_text_pg%d" % (paginated_canvas.current_page + 1))
             
             buttonframe = Frame(self.main_frame)
             wandered_button = ttk.Button(buttonframe, text="Mind Wandered", command=do_mind_wandered)
@@ -445,7 +447,7 @@ To begin, click next.''']
             next_button.pack(side=LEFT, padx=10)
             buttonframe.pack(pady=10)
 
-            #self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+            self.write_csv_row(action="still_start", text_format="still", text=main_text_id)
 
         do_instructions()
 
