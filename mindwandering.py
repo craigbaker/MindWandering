@@ -18,6 +18,7 @@ import csv
 import datetime
 import random
 import functools
+import copy
 
 from tkinter import *
 from tkinter import ttk
@@ -59,10 +60,11 @@ class MindWandering:
         self.remaining_screens = [self.run_experimenter_selections,
             self.run_instructions,
             self.run_task1,
+            self.run_comprehension_questions1,
             self.run_break,
             self.run_task2,
-            self.run_comprehension_questions,
-            self.run_questionnaires,
+            self.run_comprehension_questions2,
+            self.run_questionnaire,
             self.run_debriefing]
         
         self.next_screen()
@@ -247,15 +249,27 @@ You can end the experiment at any time by alerting the researcher.''')
         self.run_task(2)
 
 
-    def run_task(self, task_number):
-        '''
-        Run task number 1 or 2, either still or scrolling depending on the protocol
-        '''
+    def run_comprehension_questions1(self):
+        text_id = self.get_text_id(1)
+        self.run_comprehension_questions(text_id)
+    def run_comprehension_questions2(self):
+        text_id = self.get_text_id(2)
+        self.run_comprehension_questions(text_id)
+    
+
+    def get_text_id(self, task_number):
         if (task_number == 1 and self.protocol in {"1", "3"}) or (task_number == 2 and self.protocol in {"2", "4"}):
             text_id = "a"
         else:
             text_id = "b"
+        return text_id
 
+
+    def run_task(self, task_number):
+        '''
+        Run task number 1 or 2, either still or scrolling depending on the protocol
+        '''
+        text_id = self.get_text_id(task_number)
         if (task_number == 1 and self.protocol in {"1", "2"}) or (task_number == 2 and self.protocol in {"3", "4"}):
             self.do_still_task(text_id)
         else:
@@ -465,18 +479,110 @@ To begin, click next.''']
         next_button.pack(padx=100, pady=50)
 
 
-    def run_comprehension_questions(self):
+    def run_comprehension_questions(self, text_id):
         '''
         Display the comprehension questions and record the answers
         '''
-        label = Label(self.main_frame, text="Comprehension questions")
-        label.pack()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+        def do_short_answer():
+            self.clear_main_frame()
+
+            instructions = Label(self.main_frame, text='''Thank you for completing this reading task. Please respond to the following questions about the text.
+
+    Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.''')
+            instructions.pack(pady=10)
+
+            textbox = Text(self.main_frame, height=4)
+            textbox.pack()
+
+            def next_command():
+                text_content = textbox.get("0.0", "end").strip()
+                if len(text_content) == 0:
+                    messagebox.showerror(title="Error", message="Please enter text in the box to continue.") # , icon="error"
+                    return
+                else:
+                    text_content = text_content.replace('"', "'")
+                    self.write_csv_row(action='"' + text_content + '"', page="comprehension_test_SA", question="a_question_SA", text=text_id)
+                    do_multiple_choice()
+
+            next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
+            next_button.pack(padx=100, pady=50)
+
+        def do_multiple_choice():
+            self.clear_main_frame()
+
+            # [question, answer, answer, ...] the first one is always correct
+            if text_id == "a":
+                questions = [["The author describes fossils as:", "rare", "useless", "underappreciated", "tedious"],
+                    ["What is a trilobite?", "A marine creature", "an insect", "a parasite", "a type of fossil"],
+                    ["What is Burgess Shale?", "The site of a large fossil discovery", "The location of the Cambrian explosion", "Crustacean Species", "The paleontologist who discovered Trilobytes"],
+                    ["What is the main topic of this chapter?", "How we use geology and paleontology to link the present to the past", "How the earth exists and survives in the solar system", "How natural disasters can affect the environment and their potential", "How old mines might be profitably reworked"],
+                    ["What is Spriggina named after?", "A geologist", "A politician", "A marine biologist", "An astronomer"],
+                    ["Why did it appear like there was an explosion of trilobytes in the Cambrian era?", "The rate of evolution increased.", "Pre-Cambrian trilobytes were too small to fossilize", "Trilobytes developed exo-skeletons", "More Trilobytes began to be discovered"],
+                    ["What was so significant about Burgess Shale?", "Today it is realized that the discoveries were not so different after all", "It shed light on the date of the Cambrian explosion", "The paleontologist did not share his findings", "The site was destroyed before proper exploration could be conducted"],
+                    ["How large in size could trilobytes grow?", "A platter", "5 meters", "A dime", "1 centimeter"],
+                    ["How did the Cambrian explosion challenge Darwin’s evolutionary theories?", "The sudden appearance of fully formed creatures was not gradually evolved", "Trilobyte survival contradicts natural selection", "Organisms were thought to not have existed until millions of years later", "The evolutionary impact of the explosion"]
+                ]
+            elif text_id == "b":
+                questions = [["What was imperative for complex life?", "oxygen", "oil", "acidity", "SHRIMP II"],
+                    ["What was found in Shark Bay?", "Stromatolites", "Shark fossils", "meteorite rocks", "bacteria"],
+                    ["What do chemicals need in order to create life?", "A cell", "movement", "water", "energy"],
+                    ["What did eukaryotes eventually learn?", "To form together into complex multicellular beings", "to absorb water", "To kill the bacteria that was stunting their growth", "To detect subtle differences in the amounts of lead and uranium"],
+                    ["According to the authors, what invented photosynthesis?", "bacteria", "soil", "yeast", "plants"],
+                    ["What is panspermia?", "Extraterrestrial theories for life on earth", "Amino Acid linking", "An ancient period", "Atmospheric pressure"],
+                    ["Approximately how old is Earth believed to be?", "4 billion years", "4 million years", "400 trillion years", "400,000 years"],
+                    ["What is SHRIMP?", "A machine that dates rocks by measuring uranium decay", "Satellite that observes meteorites and their amino acids", "Microscopic Proteins from early Earth", "Deep sea sample extraction instrument"],
+                    ["According to the text, why was it important for the parts of the Murchison meteorite to be collected?", "To study their chemical composition for the elements of life", "To date and locate their origin", "To combine the pieces back together", "To assess ongoing threat of meteorites"],
+                    ["The main idea of the text is:", "The complexity and coincidences need for the rise of life", "The cells and proteins that make up the human body", "How dangerous meteorites may be to existing life", "How hydrogen allowed protozoa (“pre-animals”) to evolve"]
+                ]
+
+            
+            left_frame = Frame(self.main_frame)
+            left_frame.pack(expand=True, fill=BOTH, side=LEFT, anchor=E)
+            right_frame = Frame(self.main_frame)
+            right_frame.pack(expand=True, fill=BOTH, side=RIGHT, anchor=W)
+
+            answers = [None for _ in range(len(questions))]
+            for question_idx, question_items in enumerate(questions):
+                question = question_items[0]
+                options = question_items[1:]
+
+                if question_idx < len(questions) / 2:
+                    question_frame = Frame(left_frame)
+                else:
+                    question_frame = Frame(right_frame)
+
+                question_label = Label(question_frame, text="%d. %s" % (question_idx+1, question))
+                question_label.pack(anchor=W, pady=5)
+
+                shuffled_options = copy.copy(options)
+                random.shuffle(shuffled_options)
+
+                answer_var = StringVar(question_frame)
+                answer_var.set("Select...") # default value
+                def set_answer(question_idx, options, answer):
+                    answers[question_idx] = options.index(answer)
+                answer_menu = OptionMenu(question_frame, answer_var, *shuffled_options, command=functools.partial(set_answer, question_idx, options))
+                answer_menu.pack(anchor=W, pady=5, padx=20)
+
+                question_frame.pack(pady=10, anchor=W)
+
+                def next_command():
+                    if None in answers:
+                        messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
+                        return
+                    else:
+                        for q_idx in range(len(questions)):
+                            self.write_csv_row(action="answer_%d" % (answers[q_idx] + 1), question="%s_question_%d" % (text_id, q_idx + 1), text=text_id, page="comprehension_test", correct="01"[answers[q_idx] == 0])
+                        self.next_screen()
+
+            next_button = ttk.Button(right_frame, text="Next", command=next_command)
+            next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
+
+        do_short_answer()
 
 
-    def run_questionnaires(self):
+    def run_questionnaire(self):
         '''
         Display the questionnaires and record the answers
         '''
