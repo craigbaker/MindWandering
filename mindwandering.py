@@ -586,11 +586,96 @@ To begin, click next.''']
         '''
         Display the questionnaires and record the answers
         '''
-        label = Label(self.main_frame, text="Questionnaires")
-        label.pack()
+        instructions_likert = "How often do you find that you:"
+        answers_likert = ["never", "rarely", "sometimes", "often", "always"]
+        questions_4fmw1 = ["Do not remember what you were just told because you were not attentive",
+            "Do not remember part of a conversation you were following, realizing that you were not paying attention (during a television program, or when with friends or relatives)",
+            "Start to talk to someone and realize you do not know/remember your starting point and what you wanted to say exactly",
+            "Lose the thread of the discourse because, while you were talking, you were thinking of something else",
+            "Go past place you wanted to go to, while you were running errands, because you were thinking about something else (going past a certain shop, or passing a road you should have taken)",
+            "Take something different from the thing you needed (e.g., taking wine instead of milk from the fridge)",
+            "Put back an object in the wrong place (put the keys in the wardrobe)",
+            "Skip an essential step in completing a task (to forget to switch the stove off after removing the pot or pan)",
+            "Realize you were doing or did something without thinking about it"]
+        
+        questions_4fmw2 = ["Are not aware of what you are doing because you have concerns/worries, you are distracted, or you are daydreaming",
+            "Are not aware of what is happening around you",
+            "Do jobs or tasks automatically, without being aware of what you are doing",
+            "Are not able to focus your attention on what you’re reading, and to have to read again",
+            "Think how hard it is to concentrate",
+            "Daydream while you should be focusing on listening to someone",
+            "Realize that you have read a few lines of a text without concentration and do not remember anything and so to have to read that part all over again"
+        ]
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+        instructions_asrs = "Finally, please check the box that best describes how you have felt and conducted yourself over the past 6 months."
+        questions_asrs = ["How often do you have trouble wrapping up the final details of a project, once the challenging parts have been done?",
+            "How often do you have difficulty getting things in order when you have to do a task that requires organization?",
+            "How often do you have problems remembering appointments or obligations?",
+            "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?",
+            "How often do you fidget or squirm with your hands or feet when you have to sit down for a long time?",
+            "How often do you feel overly active and compelled to do things, like you were driven by a motor?"]
+
+        def do_likert(page_label, instructions, questions, question_idxes, answers, next_command):
+            self.clear_main_frame()
+
+            for c in range(len(questions)+2):
+                self.main_frame.grid_rowconfigure(c, minsize=50)
+            self.main_frame.grid_columnconfigure(0, minsize=600)
+
+            for i, heading in enumerate([instructions] + answers):
+                label = Label(self.main_frame, text=heading)
+                label.grid(column=i, row=0)
+                if i > 0:
+                    self.main_frame.grid_columnconfigure(i, minsize=100)
+            
+            answer_vars = []
+            for i in range(len(question_idxes)):
+                idx = question_idxes[i]
+                question = "%d. %s" % (idx+1, questions[i])
+
+                label = Label(self.main_frame, text=question, wraplen=400, justify=LEFT, anchor=E)
+                label.grid(column=0, row=i+1)
+
+                var = IntVar(self.main_frame)
+                var.set(-1)
+                for a in range(len(answers)):
+                    radio = Radiobutton(self.main_frame, variable=var, value=a)
+                    radio.grid(column=a+1, row=i+1)
+                answer_vars.append(var)
+
+            def do_next():
+                answer_values = [var.get() for var in answer_vars]
+                if -1 in answer_values:
+                    messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
+                    return
+                else:
+                    if "4FMW" in page_label:
+                        question_prefix = page_label.split("_")[0]
+                    else:
+                        question_prefix = page_label
+                    
+                    for q in range(len(questions)):
+                        q_idx = question_idxes[q]
+                        self.write_csv_row(action=str(answer_values[q] + 1), question="%s_q%d" % (question_prefix, q_idx + 1), page=page_label)
+                    next_command()
+
+            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+            next_button.grid(row=len(question_idxes) + 2)
+
+        def do_qualitative(next_command):
+            self.clear_main_frame()
+            next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
+            next_button.pack(padx=100, pady=50)
+
+
+        p4_command = functools.partial(do_likert, "ASRS", instructions_asrs,
+            questions_asrs, range(len(questions_asrs)), answers_likert, self.next_screen)
+        p3_command = functools.partial(do_qualitative, p4_command)
+        p2_command = functools.partial(do_likert, "4FMW_2", instructions_likert, 
+            questions_4fmw2, range(len(questions_4fmw1), len(questions_4fmw1) + len(questions_4fmw2)), answers_likert, p3_command)
+        p1_command = functools.partial(do_likert, "4FMW_1", instructions_likert, 
+            questions_4fmw1, range(len(questions_4fmw1)), answers_likert, p2_command)
+        p1_command()
 
 
     def run_debriefing(self):
