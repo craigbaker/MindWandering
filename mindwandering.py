@@ -127,14 +127,40 @@ class MindWandering:
             self.root.destroy()
 
 
-    def do_simple_next(self, instructions, command):
+    def do_simple_next(self, instructions, next_command):
         '''
         Show the instructions, with a "Next" button
         '''
         self.clear_main_frame()
         label = Label(self.main_frame, text=instructions)
         label.pack()
-        next_button = ttk.Button(self.main_frame, text="Next", command=command)
+        next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
+        next_button.pack(padx=100, pady=50)
+
+
+    def do_short_answer(self, instructions, page, question, text_id, next_command):
+        '''
+        Show the instructions, with a mandatory textbox
+        '''
+        self.clear_main_frame()
+
+        instructions = Label(self.main_frame, text=instructions)
+        instructions.pack(pady=10)
+
+        textbox = Text(self.main_frame, height=4)
+        textbox.pack()
+
+        def do_next():
+            text_content = textbox.get("0.0", "end").strip()
+            if len(text_content) == 0:
+                messagebox.showerror(title="Error", message="Please enter text in the box to continue.") # , icon="error"
+                return
+            else:
+                text_content = text_content.replace('"', "'")
+                self.write_csv_row(action=text_content, page=page, question=question, text=text_id)
+                next_command()
+
+        next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
         next_button.pack(padx=100, pady=50)
 
     
@@ -484,31 +510,7 @@ To begin, click next.''']
         Display the comprehension questions and record the answers
         '''
 
-        def do_short_answer():
-            self.clear_main_frame()
-
-            instructions = Label(self.main_frame, text='''Thank you for completing this reading task. Please respond to the following questions about the text.
-
-    Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.''')
-            instructions.pack(pady=10)
-
-            textbox = Text(self.main_frame, height=4)
-            textbox.pack()
-
-            def next_command():
-                text_content = textbox.get("0.0", "end").strip()
-                if len(text_content) == 0:
-                    messagebox.showerror(title="Error", message="Please enter text in the box to continue.") # , icon="error"
-                    return
-                else:
-                    text_content = text_content.replace('"', "'")
-                    self.write_csv_row(action='"' + text_content + '"', page="comprehension_test_SA", question="a_question_SA", text=text_id)
-                    do_multiple_choice()
-
-            next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
-            next_button.pack(padx=100, pady=50)
-
-        def do_multiple_choice():
+        def do_multiple_choice(next_command):
             self.clear_main_frame()
 
             # [question, answer, answer, ...] the first one is always correct
@@ -567,19 +569,25 @@ To begin, click next.''']
 
                 question_frame.pack(pady=10, anchor=W)
 
-                def next_command():
+                def do_next():
                     if None in answers:
                         messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
                         return
                     else:
                         for q_idx in range(len(questions)):
                             self.write_csv_row(action="answer_%d" % (answers[q_idx] + 1), question="%s_question_%d" % (text_id, q_idx + 1), text=text_id, page="comprehension_test", correct="01"[answers[q_idx] == 0])
-                        self.next_screen()
+                        next_command()
 
-            next_button = ttk.Button(right_frame, text="Next", command=next_command)
+            next_button = ttk.Button(right_frame, text="Next", command=do_next)
             next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
 
-        do_short_answer()
+        short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
+
+Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.'''
+
+        p2_command = functools.partial(do_multiple_choice, self.next_screen)
+        p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command)
+        p1_command()
 
 
     def run_questionnaire(self):
@@ -662,15 +670,54 @@ To begin, click next.''']
             next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=len(question_idxes) + 2)
 
-        def do_qualitative(next_command):
+        def do_q3(yes_command, no_command):
+            # a yes/no option
             self.clear_main_frame()
-            next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
+
+            label = Label(self.main_frame, text="Did you notice yourself mind wandering?")
+            label.pack()
+
+            answer_var = StringVar(self.main_frame)
+            answer_var.set("Select...") # default value
+            options = "yes", "no"
+            answer_menu = OptionMenu(self.main_frame, answer_var, *options)
+            answer_menu.pack(pady=5, padx=20)
+
+            def do_next():
+                answer = answer_var.get()
+                if answer in options:
+                    self.write_csv_row(action=answer, question="QMW_3", page="QMW")
+                    if answer == "yes":
+                        yes_command()
+                    else:
+                        no_command()
+                else:
+                    messagebox.showerror(title="Error", message="Please select an answer to continue.")
+                    return
+
+            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
             next_button.pack(padx=100, pady=50)
 
 
-        p4_command = functools.partial(do_likert, "ASRS", instructions_asrs,
+        p6_command = functools.partial(do_likert, "ASRS", instructions_asrs,
             questions_asrs, range(len(questions_asrs)), answers_likert, self.next_screen)
-        p3_command = functools.partial(do_qualitative, p4_command)
+        
+        qualitative_questions45 = [[4, "If you mind wandered, where were your thoughts?"],
+            [5, "Were you aware of your mind wandering before we asked you?"]]
+        next_command = p6_command
+        for number, question in qualitative_questions45[::-1]:
+            next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
+        p5_command = next_command
+
+        p4_command = functools.partial(do_q3, yes_command=p5_command, no_command=p6_command)
+
+        qualitative_questions12 = [[1, "What was your focus like during the reading task?"],
+                [2, "What were your thoughts during the task?"]]
+        next_command = p4_command
+        for number, question in qualitative_questions12[::-1]:
+            next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
+        p3_command = next_command
+
         p2_command = functools.partial(do_likert, "4FMW_2", instructions_likert, 
             questions_4fmw2, range(len(questions_4fmw1), len(questions_4fmw1) + len(questions_4fmw2)), answers_likert, p3_command)
         p1_command = functools.partial(do_likert, "4FMW_1", instructions_likert, 
@@ -694,6 +741,10 @@ To begin, click next.''']
         row_dict["protocol"] = self.protocol
         row_dict["timestamp"] = "%09d" % int(time.perf_counter() - self.experiment_start_t)
         row_dict["action"] = action
+
+        for k in list(row_dict.keys()):
+            if row_dict[k] is None:
+                del row_dict[k]
 
         self.csv_writer.writerow(row_dict)
 
