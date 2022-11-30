@@ -187,7 +187,7 @@ class MindWandering:
         heading_label.pack(anchor=W, pady=30)
 
         datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
-        default_csv_dir = os.path.expanduser("~")
+        default_csv_dir = os.path.expanduser("~/Documents/READING_STUDY2023/DATA")
         csv_filename = "experiment_%s.csv" % datestamp
         self.csv_path = os.path.join(default_csv_dir, csv_filename)
 
@@ -254,6 +254,9 @@ class MindWandering:
                 return
 
             try:
+                dirname = os.path.dirname(self.csv_path)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
                 self.csv_file = open(self.csv_path, "w", newline="", buffering=1) # buffering=1 writes each line
             except Exception as e:
                 messagebox.showerror("CSV file error", "Could not create CSV file: " + str(e))
