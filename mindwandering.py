@@ -231,9 +231,23 @@ class MindWandering:
         userid_entry = Entry(userid_frame, textvariable=userid_var)
         userid_entry.grid(row=1, column=0, sticky=W, padx=20)
 
+        testtime_frame = Frame(self.main_frame)
+        testtime_frame.pack(anchor=W, fill=BOTH, pady=30)
+        testtime_label = Label(testtime_frame, font=bold_font, text="Enter the time in seconds for the mandatory scrolling speed test")
+        testtime_label.grid(row=0, column=0, sticky=W)
+        testtime_var = StringVar(testtime_frame, value="30")
+        testtime_entry = Entry(testtime_frame, textvariable=testtime_var)
+        testtime_entry.grid(row=1, column=0, sticky=W, padx=20)
+
         def finish_and_next():
             self.experiment_start_t = time.perf_counter()
             self.user_id = userid_var.get()
+
+            try:
+                self.scrolling_testtime = int(testtime_var.get())
+            except ValueError:
+                messagebox.showerror("Speed test time error", "Invalid time for scrolling speed test: " + testtime_var.get())
+                return
 
             if os.path.exists(self.csv_path):
                 messagebox.showerror("CSV file error", "CSV file already exists: " + self.csv_path)
@@ -359,8 +373,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             scrolling_canvas.pack(fill=BOTH)
 
             scrolling_canvas.do_scroll()
-            confirm_wait_time = 30 * 1000
-            #confirm_wait_time = 5 * 1000
+            confirm_wait_time = self.scrolling_testtime * 1000
             self.root.after(confirm_wait_time, confirm_command)
 
         def do_reset():
