@@ -132,7 +132,7 @@ class MindWandering:
         Show the instructions, with a "Next" button
         '''
         self.clear_main_frame()
-        label = Label(self.main_frame, text=instructions)
+        label = Label(self.main_frame, text=instructions, wraplen=600, justify=LEFT)
         label.pack()
         next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
         next_button.pack(padx=100, pady=50)
@@ -729,11 +729,70 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
         '''
         Display the debriefing
         '''
-        label = Label(self.main_frame, text="Debriefing")
-        label.pack()
+        def do_questions(next_command):
+            self.clear_main_frame()
 
-        next_button = ttk.Button(self.main_frame, text="Finished", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+            label = Label(self.main_frame, text="Lastly, please answer the following questions:")
+            label.grid(row=0, column=0, sticky=W)
+
+            label = Label(self.main_frame, text="Is English your first language?")
+            label.grid(row=1, column=0, sticky=W)
+            q1_answer_var = StringVar(self.main_frame)
+            q1_answer_var.set("Select...") # default value
+            q1_options = "yes", "no"
+            answer_menu = OptionMenu(self.main_frame, q1_answer_var, *q1_options)
+            answer_menu.grid(row=1, column=1, sticky=W)
+
+            label = Label(self.main_frame, text="Please rate your reading proficiency in English:")
+            label.grid(row=2, column=0, sticky=W)
+            q2_answer_var = StringVar(self.main_frame)
+            q2_answer_var.set("Select...") # default value
+            q2_options = "Beginning", "Developing", "Approaching Proficiency", "Proficient", "Advanced"
+            answer_menu = OptionMenu(self.main_frame, q2_answer_var, *q2_options)
+            answer_menu.grid(row=2, column=1, sticky=W)
+
+            label = Label(self.main_frame, text="What is your age?")
+            label.grid(row=3, column=0, sticky=W)
+            q3_answer_var = StringVar(self.main_frame)
+            q3_answer_var.set("Select...") # default value
+            q3_options = "Under 18", "18-24 years old", "25-34 years old", "35-44 years old", "45-54 years old", "55-64 years old", "65+ years old"
+            answer_menu = OptionMenu(self.main_frame, q3_answer_var, *q3_options)
+            answer_menu.grid(row=3, column=1, sticky=W)
+
+            label = Label(self.main_frame, text="Please state your gender:")
+            label.grid(row=4, column=0, sticky=W)
+            q4_answer_var = StringVar(self.main_frame)
+            q4_answer_var.set("Select...") # default value
+            q4_options = "Female", "Male", "Other", "Decline to State"
+            answer_menu = OptionMenu(self.main_frame, q4_answer_var, *q4_options)
+            answer_menu.grid(row=4, column=1, sticky=W)
+
+            def do_next():
+                for do_write in False, True:
+                    # only write to the CSV after checking all answers
+                    for number, answer_var, options in [1, q1_answer_var, q1_options], [2, q2_answer_var, q2_options], [3, q3_answer_var, q3_options], [4, q4_answer_var, q4_options]:
+                        answer = answer_var.get()
+                        if answer in options:
+                            if do_write:
+                                self.write_csv_row(action=answer, question="debriefing_%d" % number, page="debriefing")
+                        else:
+                            messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
+                            return
+                next_command()
+
+            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+            next_button.grid(row=5, column=0, sticky=W)
+
+        thanks = '''Thank you for completing the survey.
+
+In the study today, you read two chapters of a Bill Bryson book and completed questions regarding the task and attention questionnaires. We conducted this study to assess comprehension and mind wandering when reading text. In particular we are interested in the differences between scrolling text and static text. We appreciate you giving your time and if you have any questions please contact us.'''
+
+        def do_thanks():
+            self.clear_main_frame()
+            label = Label(self.main_frame, text=thanks, wraplen=600, justify=LEFT)
+            label.pack()
+
+        do_questions(do_thanks)
 
 
     def write_csv_row(self, action, **row_dict):
