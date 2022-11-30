@@ -23,6 +23,7 @@ import copy
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog, messagebox, font
+#from tkmacosx import Button, Radiobutton
 
 import PIL.Image
 import PIL.ImageDraw
@@ -35,12 +36,19 @@ app_dir = os.path.dirname(sys.argv[0])
 
 class MindWandering:
     def __init__(self):
+        self.small_screen = False
         window_title = "MindWandering"
-        self.image_width = 1300 # 1600
-        self.image_height = 1500
-        self.screen_height = 700
+        if self.small_screen:
+            self.image_width = 1200
+            self.image_height = 1100
+            self.screen_height = 600
+            fontsize = 18
+        else:
+            self.image_width = 1600
+            self.image_height = 700
+            self.screen_height = 800
+            fontsize = 24
 
-        fontsize = 24
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
         self.max_chars_per_line = 96
 
@@ -49,8 +57,22 @@ class MindWandering:
         self.root = Tk()
         self.root.wm_title(window_title)
         #self.root.resizable(False, False) # this seems to mess up the geometry
-        self.root.overrideredirect(True) # remove the window bar and resize controls
+        #self.root.overrideredirect(True) # remove the window bar and resize controls, but leads to focus problems in Text()
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
+        self.root.protocol("WM_DELETE_WINDOW", False)
+
+        self.default_font = font.nametofont("TkDefaultFont")
+        self.default_font.config(size=fontsize)
+        self.large_bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
+            weight=font.BOLD, size=fontsize+fontsize//4)
+        self.bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
+            weight=font.BOLD, size=fontsize)
+
+        # The default tkinter radio buttons are too small, so use replacement images.
+        # These are from Google's material-design-icons/ios with the transparency
+        # filled with tkinter's default #ececec
+        self.radio_button_unchecked_img = PhotoImage(file=os.path.join(app_dir, "data", "baseline_radio_button_unchecked_black_48pt_1x_filled.png"))
+        self.radio_button_checked_img = PhotoImage(file=os.path.join(app_dir, "data", "baseline_radio_button_checked_black_48pt_1x_filled.png"))
 
         self.prepare_texts(fontpath, fontsize)
 
@@ -60,14 +82,14 @@ class MindWandering:
         self.main_frame = None
 
         self.remaining_screens = [self.run_experimenter_selections,
-            #self.run_instructions,
+            self.run_instructions,
             self.run_task1,
-            #self.run_comprehension_questions1,
-            #self.run_break,
-            #self.run_task2,
-            #self.run_comprehension_questions2,
-            #self.run_questionnaire,
-            #self.run_debriefing
+            self.run_comprehension_questions1,
+            self.run_break,
+            self.run_task2,
+            self.run_comprehension_questions2,
+            self.run_questionnaire,
+            self.run_debriefing
         ]
 
         self.scrolling_canvas = None
@@ -140,7 +162,6 @@ class MindWandering:
         self.rendered_texts_scrolling = {} # a single long page
         self.rendered_texts_still = {}     # paginated into "screens"
         for textid in "a", "b", "option1", "option2", "option3":
-            print ("textid:", textid)
             text = open(os.path.join(app_dir, "data/text_%s.txt" % textid),
                         encoding="utf-8").read()
             lines = textwrap.wrap(text, width=self.max_chars_per_line)
@@ -182,7 +203,7 @@ class MindWandering:
         self.clear_main_frame()
         label = Label(self.main_frame, text=instructions, wraplen=600, justify=LEFT)
         label.pack()
-        next_button = ttk.Button(self.main_frame, text="Next", command=next_command)
+        next_button = Button(self.main_frame, text="Next", command=next_command)
         next_button.pack(padx=100, pady=50)
 
 
@@ -195,8 +216,9 @@ class MindWandering:
         instructions = Label(self.main_frame, text=instructions)
         instructions.pack(pady=10)
 
-        textbox = Text(self.main_frame, height=4)
-        textbox.pack()
+        textbox = Text(self.main_frame, font=self.default_font, height=4)
+        textbox.pack(pady=20)
+        textbox.focus()
 
         def do_next():
             text_content = textbox.get("0.0", "end").strip()
@@ -208,7 +230,7 @@ class MindWandering:
                 self.write_csv_row(action=text_content, page=page, question=question, text=text_id)
                 next_command()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+        next_button = Button(self.main_frame, text="Next", command=do_next)
         next_button.pack(padx=100, pady=50)
 
     
@@ -226,12 +248,8 @@ class MindWandering:
         '''
         The experimenter selects the CSV location, experiment protocol, userID, etc.
         '''
-        large_bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
-            weight=font.BOLD, size=24)
-        bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
-            weight=font.BOLD)
 
-        heading_label = Label(self.main_frame, font=large_bold_font, text="Experiment Settings")
+        heading_label = Label(self.main_frame, font=self.large_bold_font, text="Experiment Settings")
         heading_label.pack(anchor=W, pady=30)
 
         datestamp = datetime.datetime.today().strftime("%b_%d_%Y_%H_%M_%S")
@@ -242,7 +260,7 @@ class MindWandering:
         csv_frame = Frame(self.main_frame)
         csv_frame.pack(anchor=W, fill=BOTH, pady=30)
         
-        csv_instructions_label = Label(csv_frame, font=bold_font, text="Choose destination folder for the CSV")
+        csv_instructions_label = Label(csv_frame, font=self.bold_font, text="Choose destination folder for the CSV")
         csv_instructions_label.grid(row=0, column=0, sticky=W)
         csv_folder_label = Label(csv_frame, text="Current selection: " + default_csv_dir)
         csv_folder_label.grid(row=1, column=1, sticky=W, padx=0)
@@ -253,12 +271,12 @@ class MindWandering:
                 self.csv_path = os.path.join(csv_dir, csv_filename)
                 csv_folder_label.config(text="Current selection: " + csv_dir)
 
-        csv_filename_button = ttk.Button(csv_frame, text="Select CSV folder", command=do_csv_folder_dialog)
+        csv_filename_button = Button(csv_frame, text="Select CSV folder", command=do_csv_folder_dialog)
         csv_filename_button.grid(row=1, column=0, sticky=W, padx=20, pady=5)
 
         protocol_frame = Frame(self.main_frame)
         protocol_frame.pack(anchor=W, fill=BOTH, pady=30)
-        protocol_label = Label(protocol_frame, font=bold_font, text="Select the experimental protocol. The initial choice has been randomly selected.")
+        protocol_label = Label(protocol_frame, font=self.bold_font, text="Select the experimental protocol. The initial choice has been randomly selected.")
         protocol_label.grid(row=0, column=0, sticky=W)
 
         protocol_options = "1", "2", "3", "4"
@@ -273,7 +291,7 @@ class MindWandering:
 
         userid_frame = Frame(self.main_frame)
         userid_frame.pack(anchor=W, fill=BOTH, pady=30)
-        userid_label = Label(userid_frame, font=bold_font, text="Enter the user_ID for this session")
+        userid_label = Label(userid_frame, font=self.bold_font, text="Enter the user_ID for this session")
         userid_label.grid(row=0, column=0, sticky=W)
         userid_var = StringVar(userid_frame, value="0001")
         userid_entry = Entry(userid_frame, textvariable=userid_var)
@@ -281,7 +299,7 @@ class MindWandering:
 
         testtime_frame = Frame(self.main_frame)
         testtime_frame.pack(anchor=W, fill=BOTH, pady=30)
-        testtime_label = Label(testtime_frame, font=bold_font, text="Enter the time in seconds for the mandatory scrolling speed test")
+        testtime_label = Label(testtime_frame, font=self.bold_font, text="Enter the time in seconds for the mandatory scrolling speed test")
         testtime_label.grid(row=0, column=0, sticky=W)
         testtime_var = StringVar(testtime_frame, value="30")
         testtime_entry = Entry(testtime_frame, textvariable=testtime_var)
@@ -315,7 +333,7 @@ class MindWandering:
             self.next_screen()
 
 
-        next_button = ttk.Button(self.main_frame, text="Run experiment", command=finish_and_next)
+        next_button = Button(self.main_frame, text="Run experiment", command=finish_and_next)
         next_button.pack(anchor=W, pady=20)
 
 
@@ -330,7 +348,7 @@ class MindWandering:
 You can end the experiment at any time by alerting the researcher.''')
         label.pack()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button = Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
 
@@ -395,9 +413,19 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 self.write_csv_row(action="select", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
                 do_confirm()
 
+            '''
+            def set_value(value):
+                new_speed = min(speed_options, key=lambda x:abs(x-float(value)))
+                slider.set(new_speed)
+                self.scrolling_canvas.speed = new_speed
+                self.scrolling_canvas.set_rate()
+            slider = MyScale(self.main_frame, from_=min(speed_options), to=max(speed_options), command=set_value, orient="horizontal", showvalue=0, length=500)
+            slider.pack(pady=20)
+            '''
+
             buttonframe = Frame(self.main_frame)
             self.make_arrow_button("left", buttonframe, self.scrolling_canvas)
-            select_button = ttk.Button(buttonframe, text="Select", command=do_select)
+            select_button = Button(buttonframe, text="Select", command=do_select)
             select_button.pack(side=LEFT, padx=10)
             self.make_arrow_button("right", buttonframe, self.scrolling_canvas)
             buttonframe.pack(pady=10)
@@ -414,9 +442,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.")
 
                 buttonframe = Frame(self.main_frame)
-                reset_button = ttk.Button(buttonframe, text="Reset", command=do_reset)
+                reset_button = Button(buttonframe, text="Reset", command=do_reset)
                 reset_button.pack(side=LEFT, padx=10)
-                next_button = ttk.Button(buttonframe, text="Next", command=do_instructions)
+                next_button = Button(buttonframe, text="Next", command=do_instructions)
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
@@ -545,9 +573,9 @@ To begin, click next.''']
                 self.write_csv_row(action="mind wandered", text_format="still", text=main_text_id, page="still_text_pg%d" % (paginated_canvas.current_page + 1))
             
             buttonframe = Frame(self.main_frame)
-            wandered_button = ttk.Button(buttonframe, text="Mind Wandered", command=do_mind_wandered)
+            wandered_button = Button(buttonframe, text="Mind Wandered", command=do_mind_wandered)
             wandered_button.pack(side=LEFT, padx=10)
-            next_button = ttk.Button(buttonframe, text="Next", command=do_next)
+            next_button = Button(buttonframe, text="Next", command=do_next)
             next_button.pack(side=LEFT, padx=10)
             buttonframe.pack(pady=10)
 
@@ -562,10 +590,10 @@ To begin, click next.''']
         '''
         Wait for the break to be over
         '''
-        label = Label(self.main_frame, text="Break")
+        label = Label(self.main_frame, text="5 Minute Break")
         label.pack()
 
-        next_button = ttk.Button(self.main_frame, text="Next", command=self.next_screen)
+        next_button = Button(self.main_frame, text="Next", command=self.next_screen)
         next_button.pack(padx=100, pady=50)
 
 
@@ -642,7 +670,7 @@ To begin, click next.''']
                             self.write_csv_row(action="answer_%d" % (answers[q_idx] + 1), question="%s_question_%d" % (text_id, q_idx + 1), text=text_id, page="comprehension_test", correct="01"[answers[q_idx] == 0])
                         next_command()
 
-            next_button = ttk.Button(right_frame, text="Next", command=do_next)
+            next_button = Button(right_frame, text="Next", command=do_next)
             next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
 
         short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
@@ -690,28 +718,38 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
         def do_likert(page_label, instructions, questions, question_idxes, answers, next_command):
             self.clear_main_frame()
 
-            for c in range(len(questions)+2):
-                self.main_frame.grid_rowconfigure(c, minsize=50)
-            self.main_frame.grid_columnconfigure(0, minsize=600)
+            if self.small_screen:
+                for c in range(len(questions)+2):
+                    self.main_frame.grid_rowconfigure(c, minsize=50, weight=1)
+                self.main_frame.grid_columnconfigure(0, minsize=600, weight=1)
+            else:
+                for c in range(len(questions)+2):
+                    self.main_frame.grid_rowconfigure(c, minsize=150, weight=1)
+                self.main_frame.grid_columnconfigure(0, minsize=800, weight=1)
 
             for i, heading in enumerate([instructions] + answers):
-                label = Label(self.main_frame, text=heading)
-                label.grid(column=i, row=0)
-                if i > 0:
-                    self.main_frame.grid_columnconfigure(i, minsize=100)
+                label = Label(self.main_frame, text=heading, anchor=W)
+                if i == 0:
+                     label.grid(column=i, row=0, sticky="news")
+                else:
+                    label.grid(column=i, row=0)
+                    if self.small_screen:
+                        self.main_frame.grid_columnconfigure(i, minsize=75, weight=1)
+                    else:
+                        self.main_frame.grid_columnconfigure(i, minsize=100, weight=1)
             
             answer_vars = []
             for i in range(len(question_idxes)):
                 idx = question_idxes[i]
                 question = "%d. %s" % (idx+1, questions[i])
 
-                label = Label(self.main_frame, text=question, wraplen=400, justify=LEFT, anchor=E)
-                label.grid(column=0, row=i+1)
+                label = Label(self.main_frame, text=question, wraplen=600, justify=LEFT, anchor=W)
+                label.grid(column=0, row=i+1, sticky="news") # sticky makes them expand to their grid element
 
                 var = IntVar(self.main_frame)
                 var.set(-1)
                 for a in range(len(answers)):
-                    radio = Radiobutton(self.main_frame, variable=var, value=a)
+                    radio = self.Radiobutton(self.main_frame, variable=var, value=a)
                     radio.grid(column=a+1, row=i+1)
                 answer_vars.append(var)
 
@@ -731,7 +769,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                         self.write_csv_row(action=str(answer_values[q] + 1), question="%s_q%d" % (question_prefix, q_idx + 1), page=page_label)
                     next_command()
 
-            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+            next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=len(question_idxes) + 2)
 
         def do_q3(yes_command, no_command):
@@ -746,7 +784,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             options = "yes", "no"
             answer_menu = OptionMenu(self.main_frame, answer_var, *options)
             answer_menu.pack(pady=5, padx=20)
-
+            
             def do_next():
                 answer = answer_var.get()
                 if answer in options:
@@ -759,7 +797,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                     messagebox.showerror(title="Error", message="Please select an answer to continue.")
                     return
 
-            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+            next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.pack(padx=100, pady=50)
 
 
@@ -844,7 +882,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                             return
                 next_command()
 
-            next_button = ttk.Button(self.main_frame, text="Next", command=do_next)
+            next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=5, column=0, sticky=W)
 
         thanks = '''Thank you for completing the survey.
@@ -870,6 +908,22 @@ In the study today, you read two chapters of a Bill Bryson book and completed qu
                 del row_dict[k]
 
         self.csv_writer.writerow(row_dict)
+    
+
+    def Radiobutton(self, *args, variable=None, value=None, **kwargs):
+        def command():
+            if variable.get() == value:
+                rb.config(image=self.radio_button_checked_img)
+            else:
+                rb.config(image=self.radio_button_unchecked_img)
+
+        #style = ttk.Style()
+        #bg = style.lookup('TFrame', 'background')
+
+        rb = Radiobutton(*args, variable=variable, value=value, indicatoron=0, image=self.radio_button_unchecked_img, selectimage=self.radio_button_checked_img,  **kwargs) # , , offrelief=FLAT, borderwidth=0, highlightthickness=0, highlightbackground=bg, highlightcolor=bg #, command=command highlightbackground="black", relief=GROOVE , width=2, height=1
+        #rb.config(image=self.radio_button_unchecked_img)
+
+        return rb
 
 
 def wrap_text(text, max_chars_per_line=96):
@@ -925,7 +979,6 @@ class RenderedImage:
         self.image_width = image_width
         self.image_height = image_height
 
-        print ("image")
         self.image = PIL.Image.new("L", (image_width, image_height), 255)
         draw = PIL.ImageDraw.Draw(self.image)
         draw.text((10, start_height), wrapped_text, 0, font=font)
@@ -934,7 +987,6 @@ class RenderedImage:
         #    print ("resize")
         #    self.image = image.resize((image_width, image_height), PIL.Image.Resampling.LANCZOS)
 
-        print ("photoimage")
         self.photo_image = PIL.ImageTk.PhotoImage(self.image)
 
 
