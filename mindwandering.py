@@ -48,6 +48,8 @@ class MindWandering:
 
         self.root = Tk()
         self.root.wm_title(window_title)
+        #self.root.resizable(False, False) # this seems to mess up the geometry
+        self.root.overrideredirect(True) # remove the window bar and resize controls
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
 
         self.prepare_texts(fontpath, fontsize)
@@ -58,17 +60,63 @@ class MindWandering:
         self.main_frame = None
 
         self.remaining_screens = [self.run_experimenter_selections,
-            self.run_instructions,
+            #self.run_instructions,
             self.run_task1,
-            self.run_comprehension_questions1,
-            self.run_break,
-            self.run_task2,
-            self.run_comprehension_questions2,
-            self.run_questionnaire,
-            self.run_debriefing]
+            #self.run_comprehension_questions1,
+            #self.run_break,
+            #self.run_task2,
+            #self.run_comprehension_questions2,
+            #self.run_questionnaire,
+            #self.run_debriefing
+        ]
+
+        self.scrolling_canvas = None
+        self.total_paused_time = 0. # total time spent with the experiment paused
+        menubar = Menu(self.root)
+        filemenu = Menu(menubar, tearoff=False)
+        filemenu.add_command(label="Pause", command=self.do_pause_experiment)
+        filemenu.add_command(label="End experiment", command=self.do_quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+        self.root.config(menu=menubar)
         
         self.next_screen()
         self.root.mainloop()
+
+
+    def do_quit(self):
+        if self.csv_file is not None:
+            self.csv_file.close()
+        self.root.destroy()
+
+    
+    def do_pause_experiment(self):
+        pause_start_t = time.perf_counter()
+
+        if self.scrolling_canvas is not None:
+            self.scrolling_canvas.pause()
+
+        window = Toplevel()
+        window.overrideredirect(True) # hide top buttons
+        window.title("Paused")
+        self.root.grab_release() # disable input in main window
+        window.grab_set()
+        self.root.withdraw() # hide the main window
+
+        message = "The experiment is paused. Press Unpause to continue."
+        Label(window, text=message).pack(padx=30, pady=30)
+
+        def do_unpause():
+            self.total_paused_time += time.perf_counter() - pause_start_t
+            window.grab_release()
+            self.root.grab_set()
+            self.root.deiconify()
+            window.destroy()
+
+            if self.scrolling_canvas is not None:
+                self.scrolling_canvas.unpause()
+        
+        button = Button(window, text="Unpause", command=do_unpause)
+        button.pack(padx=30, pady=30)
 
     
     def prepare_texts(self, fontpath, fontsize):
@@ -339,22 +387,22 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
 
             speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
 
-            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=speed_options, speed_selection_idx=3)
-            scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=speed_options, speed_selection_idx=3)
+            self.scrolling_canvas.pack(fill=BOTH)
 
             def do_select():
-                self.selected_speed = scrolling_canvas.speed
+                self.selected_speed = self.scrolling_canvas.speed
                 self.write_csv_row(action="select", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
                 do_confirm()
 
             buttonframe = Frame(self.main_frame)
-            self.make_arrow_button("left", buttonframe, scrolling_canvas)
+            self.make_arrow_button("left", buttonframe, self.scrolling_canvas)
             select_button = ttk.Button(buttonframe, text="Select", command=do_select)
             select_button.pack(side=LEFT, padx=10)
-            self.make_arrow_button("right", buttonframe, scrolling_canvas)
+            self.make_arrow_button("right", buttonframe, self.scrolling_canvas)
             buttonframe.pack(pady=10)
 
-            scrolling_canvas.do_scroll()
+            self.scrolling_canvas.do_scroll()
 
         def do_confirm():
             self.clear_main_frame()
@@ -372,10 +420,10 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
-            scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
+            self.scrolling_canvas.pack(fill=BOTH)
 
-            scrolling_canvas.do_scroll()
+            self.scrolling_canvas.do_scroll()
             confirm_wait_time = self.scrolling_testtime * 1000
             self.root.after(confirm_wait_time, confirm_command)
 
@@ -408,21 +456,21 @@ To begin, click next.'''
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.image_width, self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.image_width, self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
 
             def pause_fn(event):
-                scrolling_canvas.pause()
+                self.scrolling_canvas.pause()
                 self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
             def unpause_fn(event):
-                scrolling_canvas.unpause()
+                self.scrolling_canvas.unpause()
                 self.write_csv_row(action="unpause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
             self.root.bind("<space>", pause_fn)
             self.root.bind("c", unpause_fn)
 
-            scrolling_canvas.pack(fill=BOTH)
-            scrolling_canvas.do_scroll()
+            self.scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas.do_scroll()
 
             self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
@@ -814,7 +862,7 @@ In the study today, you read two chapters of a Bill Bryson book and completed qu
     def write_csv_row(self, action, **row_dict):
         row_dict["user_ID"] = self.user_id
         row_dict["protocol"] = self.protocol
-        row_dict["timestamp"] = "%09d" % int(time.perf_counter() - self.experiment_start_t)
+        row_dict["timestamp"] = "%09d" % int(time.perf_counter() - (self.experiment_start_t + self.total_paused_time))
         row_dict["action"] = action
 
         for k in list(row_dict.keys()):
