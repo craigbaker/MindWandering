@@ -369,7 +369,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
+            scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
             scrolling_canvas.pack(fill=BOTH)
 
             scrolling_canvas.do_scroll()
