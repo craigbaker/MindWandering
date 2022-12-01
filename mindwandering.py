@@ -44,9 +44,9 @@ class MindWandering:
             self.screen_height = 600
             fontsize = 18
         else:
-            self.image_width = 1600
-            self.image_height = 700
-            self.screen_height = 800
+            self.image_width = 2000
+            self.image_height = 800
+            self.screen_height = 1400
             fontsize = 24
 
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
@@ -646,7 +646,7 @@ To begin, click next.''']
                 else:
                     question_frame = Frame(right_frame)
 
-                question_label = Label(question_frame, text="%d. %s" % (question_idx+1, question))
+                question_label = Label(question_frame, text="%d. %s" % (question_idx+1, question), wraplen=800)
                 question_label.pack(anchor=W, pady=5)
 
                 shuffled_options = copy.copy(options)
@@ -686,19 +686,23 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
         '''
         Display the questionnaires and record the answers
         '''
+        instructions_internal = "Please take the time to thoughtfully respond to the following questions."
+        questions_internal = ["How aware are you with your internal thoughts and feelings?"]
+        answers_internal = ["Not at all aware", "Slightly aware", "Somewhat aware", "Moderately aware", "Extremely aware"]
+
         instructions_likert = "How often do you find that you:"
         answers_likert = ["never", "rarely", "sometimes", "often", "always"]
         questions_4fmw1 = ["Do not remember what you were just told because you were not attentive",
             "Do not remember part of a conversation you were following, realizing that you were not paying attention (during a television program, or when with friends or relatives)",
             "Start to talk to someone and realize you do not know/remember your starting point and what you wanted to say exactly",
-            "Lose the thread of the discourse because, while you were talking, you were thinking of something else",
-            "Go past place you wanted to go to, while you were running errands, because you were thinking about something else (going past a certain shop, or passing a road you should have taken)",
+            "Lose the thread of the discourse because, while you were talking, you were thinking of something else"]
+        questions_4fmw2 = ["Go past place you wanted to go to, while you were running errands, because you were thinking about something else (going past a certain shop, or passing a road you should have taken)",
             "Take something different from the thing you needed (e.g., taking wine instead of milk from the fridge)",
             "Put back an object in the wrong place (put the keys in the wardrobe)",
             "Skip an essential step in completing a task (to forget to switch the stove off after removing the pot or pan)",
             "Realize you were doing or did something without thinking about it"]
         
-        questions_4fmw2 = ["Are not aware of what you are doing because you have concerns/worries, you are distracted, or you are daydreaming",
+        questions_4fmw3 = ["Are not aware of what you are doing because you have concerns/worries, you are distracted, or you are daydreaming",
             "Are not aware of what is happening around you",
             "Do jobs or tasks automatically, without being aware of what you are doing",
             "Are not able to focus your attention on what you’re reading, and to have to read again",
@@ -724,7 +728,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                 self.main_frame.grid_columnconfigure(0, minsize=600, weight=1)
             else:
                 for c in range(len(questions)+2):
-                    self.main_frame.grid_rowconfigure(c, minsize=150, weight=1)
+                    self.main_frame.grid_rowconfigure(c, minsize=100, weight=1)
                 self.main_frame.grid_columnconfigure(0, minsize=800, weight=1)
 
             for i, heading in enumerate([instructions] + answers):
@@ -743,7 +747,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                 idx = question_idxes[i]
                 question = "%d. %s" % (idx+1, questions[i])
 
-                label = Label(self.main_frame, text=question, wraplen=600, justify=LEFT, anchor=W)
+                label = Label(self.main_frame, text=question, wraplen=800, justify=LEFT, anchor=W)
                 label.grid(column=0, row=i+1, sticky="news") # sticky makes them expand to their grid element
 
                 var = IntVar(self.main_frame)
@@ -801,29 +805,32 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_button.pack(padx=100, pady=50)
 
 
-        p6_command = functools.partial(do_likert, "ASRS", instructions_asrs,
+        p8_command = functools.partial(do_likert, "ASRS", instructions_asrs,
             questions_asrs, range(len(questions_asrs)), answers_likert, self.next_screen)
         
         qualitative_questions45 = [[4, "If you mind wandered, where were your thoughts?"],
             [5, "Were you aware of your mind wandering before we asked you?"]]
-        next_command = p6_command
+        next_command = p8_command
         for number, question in qualitative_questions45[::-1]:
             next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
-        p5_command = next_command
+        p7_command = next_command
 
-        p4_command = functools.partial(do_q3, yes_command=p5_command, no_command=p6_command)
+        p6_command = functools.partial(do_q3, yes_command=p7_command, no_command=p8_command)
 
         qualitative_questions12 = [[1, "What was your focus like during the reading task?"],
                 [2, "What were your thoughts during the task?"]]
-        next_command = p4_command
+        next_command = p6_command
         for number, question in qualitative_questions12[::-1]:
             next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
-        p3_command = next_command
+        p5_command = next_command
 
-        p2_command = functools.partial(do_likert, "4FMW_2", instructions_likert, 
-            questions_4fmw2, range(len(questions_4fmw1), len(questions_4fmw1) + len(questions_4fmw2)), answers_likert, p3_command)
-        p1_command = functools.partial(do_likert, "4FMW_1", instructions_likert, 
-            questions_4fmw1, range(len(questions_4fmw1)), answers_likert, p2_command)
+        p4_command = functools.partial(do_likert, "4FMW_3", instructions_likert, 
+            questions_4fmw3, range(len(questions_4fmw1)+len(questions_4fmw2), len(questions_4fmw1)+len(questions_4fmw2)+len(questions_4fmw3)), answers_likert, p5_command)
+        p3_command = functools.partial(do_likert, "4FMW_2", instructions_likert, 
+            questions_4fmw2, range(len(questions_4fmw1), len(questions_4fmw1) + len(questions_4fmw2)), answers_likert, p4_command)
+        p2_command = functools.partial(do_likert, "4FMW_1", instructions_likert, 
+            questions_4fmw1, range(len(questions_4fmw1)), answers_likert, p3_command)
+        p1_command = functools.partial(do_likert, "4FMW_internal", instructions_internal, questions_internal, [1], answers_internal, p2_command)
         p1_command()
 
 
