@@ -553,7 +553,7 @@ To begin, click next.''']
 
         def do_task():
             self.clear_main_frame()
-            instructions = Label(self.main_frame, text='You can progress through the text by clicking NEXT. If you mind wanders, click the purple button and continue reading.')
+            instructions = Label(self.main_frame, text='You can progress through the text by clicking NEXT. If you mind wanders, click the Mind Wandered button and continue reading.')
             instructions.pack(pady=10)
 
             paginated_canvas = PaginatedCanvas(self.main_frame, self.rendered_texts_still[main_text_id])
