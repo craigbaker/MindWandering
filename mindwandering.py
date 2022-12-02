@@ -37,7 +37,8 @@ app_dir = os.path.dirname(sys.argv[0])
 class MindWandering:
     def __init__(self):
         self.small_screen = False
-        window_title = "MindWandering"
+        window_title = "Reading Application"
+        self.speed_options = [200, 216, 248, 280, 296, 312, 328] # wpm
         if self.small_screen:
             self.image_width = 1200
             self.screen_height = 600
@@ -401,10 +402,8 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            speed_options = [200, 216, 232, 248, 264, 280, 296] # wpm
-
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=speed_options, speed_selection_idx=3)
-            self.scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=self.speed_options, speed_selection_idx=3)
+            self.scrolling_canvas.pack(fill=BOTH, anchor=CENTER)
 
             def do_select():
                 self.selected_speed = self.scrolling_canvas.speed
@@ -413,11 +412,11 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
 
             '''
             def set_value(value):
-                new_speed = min(speed_options, key=lambda x:abs(x-float(value)))
+                new_speed = min(self.speed_options, key=lambda x:abs(x-float(value)))
                 slider.set(new_speed)
                 self.scrolling_canvas.speed = new_speed
                 self.scrolling_canvas.set_rate()
-            slider = MyScale(self.main_frame, from_=min(speed_options), to=max(speed_options), command=set_value, orient="horizontal", showvalue=0, length=500)
+            slider = MyScale(self.main_frame, from_=min(self.speed_options), to=max(self.speed_options), command=set_value, orient="horizontal", showvalue=0, length=500)
             slider.pack(pady=20)
             '''
 
