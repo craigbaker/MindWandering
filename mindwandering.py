@@ -342,13 +342,20 @@ class MindWandering:
         '''
         self.write_csv_row(action="started")
 
-        label = Label(self.main_frame, text='''Welcome to the Reading Comprehension Study, where we are interested in how individuals process and comprehend content when reading.
+        instructions = ['''Welcome to the Reading Comprehension Study, where we are interested in how individuals process and comprehend content when reading.
 
-You can end the experiment at any time by alerting the researcher.''')
-        label.pack()
+You can end the experiment at any time by alerting the researcher.''',
+            '''This study will include two different reading tasks.
 
-        next_button = Button(self.main_frame, text="Next", command=self.next_screen)
-        next_button.pack(padx=100, pady=50)
+It will take approximately 25 minutes to read each text.
+You will have a 5-minute break before starting the second text.''',
+            '''Following each task, you will be asked questions related to the text. Finally, you will complete a couple questionnaires.
+To begin these tasks, click Next.''']
+
+        command = self.next_screen
+        for inst in instructions[::-1]:
+            command = functools.partial(self.do_simple_next, inst, command)
+        command()
 
 
     def run_task1(self):
@@ -698,7 +705,6 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             "Put back an object in the wrong place (put the keys in the wardrobe)",
             "Skip an essential step in completing a task (to forget to switch the stove off after removing the pot or pan)",
             "Realize you were doing or did something without thinking about it"]
-        
         questions_4fmw3 = ["Are not aware of what you are doing because you have concerns/worries, you are distracted, or you are daydreaming",
             "Are not aware of what is happening around you",
             "Do jobs or tasks automatically, without being aware of what you are doing",
