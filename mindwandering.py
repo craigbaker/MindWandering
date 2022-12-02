@@ -414,8 +414,8 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.image_width, self.screen_height, speed_options=self.speed_options, speed_selection_idx=3)
-            self.scrolling_canvas.pack(fill=BOTH, anchor=CENTER)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=3)
+            self.scrolling_canvas.pack()
 
             def do_select():
                 self.selected_speed = self.scrolling_canvas.speed
@@ -457,8 +457,8 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 next_button.pack(side=LEFT, padx=10)
                 buttonframe.pack(pady=10)
             
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.image_width, self.screen_height, speed_options=[self.selected_speed])
-            self.scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.screen_height, speed_options=[self.selected_speed])
+            self.scrolling_canvas.pack()
 
             self.scrolling_canvas.do_scroll()
             confirm_wait_time = self.scrolling_testtime * 1000
@@ -493,7 +493,7 @@ To begin, click next.'''
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
             
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.image_width, self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
 
             def pause_fn(event):
                 self.scrolling_canvas.pause()
@@ -506,7 +506,7 @@ To begin, click next.'''
             self.root.bind("<space>", pause_fn)
             self.root.bind("c", unpause_fn)
 
-            self.scrolling_canvas.pack(fill=BOTH)
+            self.scrolling_canvas.pack()
             self.scrolling_canvas.do_scroll()
 
             self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
@@ -1060,7 +1060,7 @@ class ScrollingCanvas:
     '''
     A widget that scrolls an image vertically at a specific speed
     '''
-    def __init__(self, parent_widget, rendered_image, image_width, screen_height, speed_options, speed_selection_idx=0, done_command=None):
+    def __init__(self, parent_widget, rendered_image, screen_height, speed_options, speed_selection_idx=0, done_command=None):
             '''
             speed_options: a list of speeds in wpm
             speed_selection_idx: the initial speed selection, an index into speed_options
@@ -1072,7 +1072,7 @@ class ScrollingCanvas:
             self.speed_selection_idx = speed_selection_idx
             self.screen_height = screen_height
 
-            self.canvas = Canvas(parent_widget, width=image_width, height=screen_height - 100)
+            self.canvas = Canvas(parent_widget, width=rendered_image.image_width, height=screen_height - 100)
             self.canvas.create_image(10, 10, anchor=NW, image=self.rendered_image.photo_image)
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
