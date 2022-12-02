@@ -40,13 +40,11 @@ class MindWandering:
         window_title = "MindWandering"
         if self.small_screen:
             self.image_width = 1200
-            self.image_height = 1100
             self.screen_height = 600
             fontsize = 18
         else:
             self.image_width = 2000
-            self.image_height = 800
-            self.screen_height = 1400
+            self.screen_height = 1100
             fontsize = 24
 
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
@@ -58,7 +56,7 @@ class MindWandering:
         self.root.wm_title(window_title)
         #self.root.resizable(False, False) # this seems to mess up the geometry
         #self.root.overrideredirect(True) # remove the window bar and resize controls, but leads to focus problems in Text()
-        self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 100))
+        self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 300))
         self.root.protocol("WM_DELETE_WINDOW", False)
 
         self.default_font = font.nametofont("TkDefaultFont")
