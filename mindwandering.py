@@ -433,11 +433,12 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             '''
 
             buttonframe = Frame(self.main_frame)
-            self.make_arrow_button("left", buttonframe, self.scrolling_canvas)
+            left_button = self.make_arrow_button("left", buttonframe, self.scrolling_canvas)
             select_button = Button(buttonframe, text="Select", command=do_select)
             select_button.pack(side=LEFT, padx=10)
-            self.make_arrow_button("right", buttonframe, self.scrolling_canvas)
+            right_button = self.make_arrow_button("right", buttonframe, self.scrolling_canvas)
             buttonframe.pack(pady=10)
+            self.scrolling_canvas.set_arrow_buttons(left_button, right_button)
 
             self.scrolling_canvas.do_scroll()
 
@@ -528,8 +529,9 @@ To begin, click next.'''
             command = scrolling_canvas.increase_scrolling_speed
 
         style = ttk.Style()
+        style_name = '%s.TButton' % direction.capitalize()
         style.layout(
-            '%s.TButton' % direction.capitalize(),[
+            style_name, [
                 ('Button.focus', {'children': [
                     ('Button.%sarrow' % direction, None),
                     ('Button.padding', {'sticky': sticky, 'children': [
@@ -538,8 +540,9 @@ To begin, click next.'''
                     )]}
                 )]
             )
-        style.configure('%s.TButton' % direction.capitalize(), font=('','40','bold'), width=1, arrowcolor='black')
-        button = ttk.Button(parent, style='%s.TButton' % direction.capitalize(), text='', command=command)
+        style.configure(style_name, font=('','40','bold'), width=1)#, arrowcolor='black')
+        style.map(style_name, arrowcolor=[("active", "black"), ("disabled", "grey")])
+        button = ttk.Button(parent, style=style_name, text="", command=command)
         button.pack(side=LEFT)
         return button
 
@@ -1083,7 +1086,12 @@ class ScrollingCanvas:
             self.set_rate()
 
             self.recent_delays = []
+            self.arrow_buttons = None
 
+    
+    def set_arrow_buttons(self, left_button, right_button):
+        self.arrow_buttons = [left_button, right_button]
+    
 
     def pack(self, *args, **kwargs):
             self.canvas.pack(*args, **kwargs)
@@ -1125,6 +1133,12 @@ class ScrollingCanvas:
             self.speed = self.speed_options[self.speed_selection_idx]
             self.set_rate()
 
+            if self.arrow_buttons is not None:
+                self.arrow_buttons[0]["state"] = "normal"
+        else:
+            if self.arrow_buttons is not None:
+                self.arrow_buttons[1]["state"] = "disabled"
+
     
     def decrease_scrolling_speed(self):
         assert self.speed_options is not None
@@ -1132,6 +1146,12 @@ class ScrollingCanvas:
             self.speed_selection_idx -= 1
             self.speed = self.speed_options[self.speed_selection_idx]
             self.set_rate()
+            
+            if self.arrow_buttons is not None:
+                self.arrow_buttons[1]["state"] = "normal"
+        else:
+            if self.arrow_buttons is not None:
+                self.arrow_buttons[0]["state"] = "disabled"
 
 
     def set_rate(self):
