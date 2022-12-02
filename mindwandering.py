@@ -1075,6 +1075,8 @@ class ScrollingCanvas:
             self.speed_selection_idx = speed_selection_idx
             self.screen_height = screen_height
 
+            self.pixel_skip = 1
+
             self.canvas = Canvas(parent_widget, width=rendered_image.image_width, height=screen_height - 100)
             self.canvas.create_image(10, 10, anchor=NW, image=self.rendered_image.photo_image)
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -1102,7 +1104,7 @@ class ScrollingCanvas:
             self.parent_widget.after(100, self.do_scroll)
             return
 
-        self.n += 1 # self.speed / 200.
+        self.n += self.pixel_skip
         if self.n > self.rendered_image.image_height - self.screen_height:
             if self.done_command is not None:
                 self.done_command()
@@ -1116,11 +1118,18 @@ class ScrollingCanvas:
         frame_delay = min(frame_delay, self.frame_t)
         self.recent_delays.append(frame_delay)
         mean_delay = sum(self.recent_delays) / len(self.recent_delays)
-        #print ("mean delay:", mean_delay, "frame_t:", self.frame_t)
+        print (self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
         if len(self.recent_delays) > 10:
             self.recent_delays = self.recent_delays[-10:]
         self.frame_start = frame_end
         #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
+
+        if mean_delay > self.frame_t / 2:
+            self.pixel_skip += 1
+            self.set_rate()
+        elif self.pixel_skip > 1 and mean_delay < self.frame_t / 10:
+            self.pixel_skip -= 1
+            self.set_rate()
         
         self.canvas.yview_moveto(self.n / self.rendered_image.image_height)
         self.parent_widget.after(round(1000 * (self.frame_t - mean_delay)), self.do_scroll)
@@ -1155,7 +1164,7 @@ class ScrollingCanvas:
 
 
     def set_rate(self):
-        self.frame_t = 60. * self.rendered_image.words_per_vpixel / self.speed
+        self.frame_t = self.pixel_skip * 60. * self.rendered_image.words_per_vpixel / self.speed
     
 
     def pause(self):
