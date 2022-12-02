@@ -448,7 +448,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions.pack(pady=10)
 
             def confirm_command():
-                instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.")
+                instructions.config(text="If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.", font=self.bold_font)
 
                 buttonframe = Frame(self.main_frame)
                 reset_button = Button(buttonframe, text="Reset", command=do_reset)
