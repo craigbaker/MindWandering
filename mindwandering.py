@@ -60,6 +60,9 @@ class MindWandering:
         self.root.geometry(str(self.image_width + 1) + "x" + str(self.screen_height + 300))
         self.root.protocol("WM_DELETE_WINDOW", False)
 
+        style = ttk.Style(self.root)
+        style.theme_use("clam")
+
         self.default_font = font.nametofont("TkDefaultFont")
         self.default_font.config(size=fontsize)
         self.large_bold_font = font.Font(family=font.nametofont("TkDefaultFont").cget("family"),
@@ -284,7 +287,8 @@ class MindWandering:
         protocol_var.set(self.protocol) # default value
         def set_protocol(protocol):
             self.protocol = protocol
-        protocol_menu = OptionMenu(protocol_frame, protocol_var, *protocol_options, command=set_protocol)
+        protocol_menu = ttk.OptionMenu(protocol_frame, protocol_var, self.protocol, *protocol_options, command=set_protocol)
+        protocol_menu["menu"].config(font=self.default_font)
         protocol_menu.grid(row=1, column=0, sticky=W, padx=30)
 
 
@@ -350,6 +354,7 @@ You can end the experiment at any time by alerting the researcher.''',
 It will take approximately 25 minutes to read each text.
 You will have a 5-minute break before starting the second text.''',
             '''Following each task, you will be asked questions related to the text. Finally, you will complete a couple questionnaires.
+
 To begin these tasks, click Next.''']
 
         command = self.next_screen
@@ -551,6 +556,7 @@ To begin, click next.'''
             instructions = ["The text you will read will be displayed on the screen, page by page. You can progress through the text by clicking NEXT.",
                 "It is possible that your mind may wander from the text, this is understandable, anytime this occurs, click the “mind wandered” button and then return your attention to the text.",
                 '''After you have finished reading the text, we will ask you some questions related to what you read.
+
 To begin, click next.''']
 
             command = do_task
@@ -645,6 +651,9 @@ To begin, click next.''']
                 question = question_items[0]
                 options = question_items[1:]
 
+                for i in range(len(options)):
+                    options[i] = "\n".join(textwrap.wrap(options[i], width=30))
+
                 if question_idx < len(questions) / 2:
                     question_frame = Frame(left_frame)
                 else:
@@ -660,7 +669,8 @@ To begin, click next.''']
                 answer_var.set("Select...") # default value
                 def set_answer(question_idx, options, answer):
                     answers[question_idx] = options.index(answer)
-                answer_menu = OptionMenu(question_frame, answer_var, *shuffled_options, command=functools.partial(set_answer, question_idx, options))
+                answer_menu = ttk.OptionMenu(question_frame, answer_var, "Select...", *shuffled_options, command=functools.partial(set_answer, question_idx, options))
+                answer_menu["menu"].config(font=self.default_font)
                 answer_menu.pack(anchor=W, pady=5, padx=20)
 
                 question_frame.pack(pady=10, anchor=W)
@@ -789,7 +799,8 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             answer_var = StringVar(self.main_frame)
             answer_var.set("Select...") # default value
             options = "yes", "no"
-            answer_menu = OptionMenu(self.main_frame, answer_var, *options)
+            answer_menu = ttk.OptionMenu(self.main_frame, answer_var, "Select...", *options)
+            answer_menu["menu"].config(font=self.default_font)
             answer_menu.pack(pady=5, padx=20)
             
             def do_next():
@@ -852,32 +863,36 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             q1_answer_var = StringVar(self.main_frame)
             q1_answer_var.set("Select...") # default value
             q1_options = "yes", "no"
-            answer_menu = OptionMenu(self.main_frame, q1_answer_var, *q1_options)
-            answer_menu.grid(row=1, column=1, sticky=W)
+            answer_menu = ttk.OptionMenu(self.main_frame, q1_answer_var, "Select...", *q1_options)
+            answer_menu["menu"].config(font=self.default_font)
+            answer_menu.grid(row=1, column=2, sticky=W)
 
             label = Label(self.main_frame, text="Please rate your reading proficiency in English:")
             label.grid(row=2, column=0, sticky=W)
             q2_answer_var = StringVar(self.main_frame)
             q2_answer_var.set("Select...") # default value
             q2_options = "Beginning", "Developing", "Approaching Proficiency", "Proficient", "Advanced"
-            answer_menu = OptionMenu(self.main_frame, q2_answer_var, *q2_options)
-            answer_menu.grid(row=2, column=1, sticky=W)
+            answer_menu = ttk.OptionMenu(self.main_frame, q2_answer_var, "Select...", *q2_options)
+            answer_menu["menu"].config(font=self.default_font)
+            answer_menu.grid(row=2, column=2, sticky=W)
 
             label = Label(self.main_frame, text="What is your age?")
             label.grid(row=3, column=0, sticky=W)
             q3_answer_var = StringVar(self.main_frame)
             q3_answer_var.set("Select...") # default value
             q3_options = "Under 18", "18-24 years old", "25-34 years old", "35-44 years old", "45-54 years old", "55-64 years old", "65+ years old"
-            answer_menu = OptionMenu(self.main_frame, q3_answer_var, *q3_options)
-            answer_menu.grid(row=3, column=1, sticky=W)
+            answer_menu = ttk.OptionMenu(self.main_frame, q3_answer_var, "Select...", *q3_options)
+            answer_menu["menu"].config(font=self.default_font)
+            answer_menu.grid(row=3, column=2, sticky=W)
 
             label = Label(self.main_frame, text="Please state your gender:")
             label.grid(row=4, column=0, sticky=W)
             q4_answer_var = StringVar(self.main_frame)
             q4_answer_var.set("Select...") # default value
             q4_options = "Female", "Male", "Other", "Decline to State"
-            answer_menu = OptionMenu(self.main_frame, q4_answer_var, *q4_options)
-            answer_menu.grid(row=4, column=1, sticky=W)
+            answer_menu = ttk.OptionMenu(self.main_frame, q4_answer_var, "Select...", *q4_options)
+            answer_menu["menu"].config(font=self.default_font)
+            answer_menu.grid(row=4, column=2, sticky=W)
 
             def do_next():
                 for do_write in False, True:
@@ -894,6 +909,8 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
 
             next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=5, column=0, sticky=W)
+
+            self.root.update() # otherwise the menus don't initially appear...
 
         thanks = '''Thank you for completing the survey.
 
