@@ -612,7 +612,6 @@ To begin, click next.'''
         '''
         def do_instructions():
             self.clear_main_frame()
-            #self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
             instructions = ["The text you will read will be displayed on the screen, page by page. You can progress through the text by clicking NEXT.",
                 "It is possible that your mind may wander from the text, this is understandable, anytime this occurs, click the “mind wandered” button and then return your attention to the text.",
@@ -1078,8 +1077,8 @@ class RenderedImage:
 
         if screen_height is not None:
             # the top of the text starts at the center of the screen (.5), and the end
-            # finishes by scrolling off the screen (1.)
-            image_height += int(1.5 * screen_height)
+            # finishes by scrolling mostly off the screen (0.75)
+            image_height += int((0.5 + 0.75) * screen_height)
             start_height = screen_height / 2.
         else:
             # the text starts at the top of the page
