@@ -519,11 +519,14 @@ To begin, click next.'''
                     self.scrolling_canvas.pause()
 
             unpause_count = 0
+            next_button_shown = False
             def unpause_fn(event):
                 nonlocal unpause_count
                 if self.scrolling_canvas.paused:
                     unpause_count += 1
                     self.scrolling_canvas.unpause()
+                    if unpause_count >= 3:
+                        show_next_button()
 
             self.root.bind("<space>", pause_fn)
             self.root.bind("c", unpause_fn)
@@ -538,8 +541,11 @@ To begin, click next.'''
                     next_command()
 
             def show_next_button():
-                next_button = Button(self.main_frame, text="Next", command=do_next_command)
-                next_button.pack(pady=50, padx=20)
+                nonlocal next_button_shown
+                if not next_button_shown:
+                    next_button = Button(self.main_frame, text="Next", command=do_next_command)
+                    next_button.pack(pady=50, padx=20)
+                    next_button_shown = True
 
             practice_time = 10
             self.root.after(practice_time * 1000, show_next_button)
