@@ -213,7 +213,7 @@ class MindWandering:
         next_button.pack(padx=100, pady=50)
 
 
-    def do_short_answer(self, instructions, page, question, text_id, next_command):
+    def do_short_answer(self, instructions, page, question, text_id, next_command, max_words=None):
         '''
         Show the instructions, with a mandatory textbox
         '''
@@ -222,7 +222,41 @@ class MindWandering:
         instructions = Label(self.main_frame, text=instructions)
         instructions.pack(pady=10)
 
-        textbox = Text(self.main_frame, font=self.default_font, height=4)
+        class ModifiedText(Text):
+            # Calls modified_fn every time text is modified
+            def __init__(self, *args, modified_fn=None, **kwargs):
+                Text.__init__(self, *args, **kwargs)
+                self.modified_fn = modified_fn
+                self.clearModifiedFlag()
+                self.bind_all('<<Modified>>', self._beenModified)
+
+            def _beenModified(self, event=None):
+                if self._resetting_modified_flag: return
+                self.clearModifiedFlag()
+                self.modified_fn(event)
+
+            def clearModifiedFlag(self):
+                self._resetting_modified_flag = True
+                try:
+                    # Set 'modified' to 0.  This will also trigger the <<Modified>>
+                    # virtual event which is why we need the sentinel.
+                    self.tk.call(self._w, 'edit', 'modified', 0)
+                finally:
+                    # Clean the sentinel.
+                    self._resetting_modified_flag = False
+
+        # Enforce the maximum number of words
+        def modified_fn(event):
+            if max_words is not None:
+                text = textbox.get("0.0", "end").strip()
+                words = text.split()
+                if len(words) > max_words:
+                    words = words[:max_words]
+                    textbox.delete(1.0, END)
+                    textbox.insert(END, " ".join(words))
+
+        textbox = ModifiedText(self.main_frame, modified_fn=modified_fn, font=self.default_font, height=4)
+
         textbox.pack(pady=20)
         textbox.focus()
 
@@ -767,12 +801,13 @@ To begin, click next.''']
             next_button = Button(right_frame, text="Next", command=do_next)
             next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
 
+        max_words = 50
         short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
 
-Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.'''
+Please use the textbox below to summarize the key ideas of the text in 2-4 sentences (maximum %d words).''' % max_words
 
         p2_command = functools.partial(do_multiple_choice, self.next_screen)
-        p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command)
+        p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command, max_words)
         p1_command()
 
 
