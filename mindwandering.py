@@ -820,11 +820,11 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=len(question_idxes) + 2)
 
-        def do_q3(yes_command, no_command):
+        def do_q3(text, yes_command, no_command):
             # a yes/no option
             self.clear_main_frame()
 
-            label = Label(self.main_frame, text="Did you notice yourself mind wandering?")
+            label = Label(self.main_frame, text=text)
             label.pack()
 
             answer_var = StringVar(self.main_frame)
@@ -850,9 +850,13 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_button.pack(padx=100, pady=50)
 
 
-        p8_command = functools.partial(do_likert, "ASRS", instructions_asrs,
+        p10_command = functools.partial(do_likert, "ASRS", instructions_asrs,
             questions_asrs, range(len(questions_asrs)), answers_likert, self.next_screen)
         
+        p9_command = functools.partial(do_likert, "spacebar", "", ["How often was this the reason for using the spacebar?"], [0], answers_likert, self.next_screen)
+
+        p8_command = functools.partial(do_q3, text="Did you find yourself using the spacebar function when your attention drifted from the text?", yes_command=p9_command, no_command=p10_command)
+
         qualitative_questions45 = [[4, "If you mind wandered, where were your thoughts?"],
             [5, "Were you aware of your mind wandering before we asked you?"]]
         next_command = p8_command
@@ -860,7 +864,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
         p7_command = next_command
 
-        p6_command = functools.partial(do_q3, yes_command=p7_command, no_command=p8_command)
+        p6_command = functools.partial(do_q3, text="Did you notice yourself mind wandering?", yes_command=p7_command, no_command=p8_command)
 
         qualitative_questions12 = [[1, "What was your focus like during the reading task?"],
                 [2, "What were your thoughts during the task?"]]
