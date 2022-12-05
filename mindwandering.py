@@ -806,12 +806,21 @@ When ready to begin task 2, click Next.''')
             next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
 
         max_words = 50
+
+        focus_questions = [[1, "What was your focus like during this reading task?"],
+                [2, "In 1-2 sentences, what were your thoughts during the task? "]]
+        next_command = self.next_screen
+        for number, question in focus_questions[::-1]:
+            next_command = functools.partial(self.do_short_answer, question, "comprehension_focus_SA", "comprehension_focus_%d" % number, text_id=text_id, next_command=next_command, max_words=max_words)
+        focus_command = next_command
+
         short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
 
 Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.'''
 
-        p2_command = functools.partial(do_multiple_choice, self.next_screen)
+        p2_command = functools.partial(do_multiple_choice, focus_command)
         p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command, max_words)
+
         p1_command()
 
 
@@ -819,7 +828,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
         '''
         Display the questionnaires and record the answers
         '''
-        instructions_internal = "Please take the time to thoughtfully respond to the following questions."
+        initial_instructions = "Please take the time to thoughtfully respond to the following questions."
         questions_internal = ["How aware are you with your internal thoughts and feelings?"]
         answers_internal = ["Not at all aware", "Slightly aware", "Somewhat aware", "Moderately aware", "Extremely aware"]
 
@@ -908,11 +917,11 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_button = Button(self.main_frame, text="Next", command=do_next)
             next_button.grid(row=len(question_idxes) + 2)
 
-        def do_q3(text, yes_command, no_command):
+        def do_yes_no(text, question_idx, yes_command, no_command):
             # a yes/no option
             self.clear_main_frame()
 
-            label = Label(self.main_frame, text=text)
+            label = Label(self.main_frame, text="%d. %s" % (question_idx+1, text))
             label.pack()
 
             answer_var = StringVar(self.main_frame)
@@ -925,7 +934,7 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             def do_next():
                 answer = answer_var.get()
                 if answer in options:
-                    self.write_csv_row(action=answer, question="QMW_3", page="QMW")
+                    self.write_csv_row(action=answer, question="QMW_%d" % (question_idx+1), page="QMW")
                     if answer == "yes":
                         yes_command()
                     else:
@@ -938,28 +947,20 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             next_button.pack(padx=100, pady=50)
 
 
-        p10_command = functools.partial(do_likert, "ASRS", instructions_asrs,
+        p11_command = functools.partial(do_likert, "ASRS", instructions_asrs,
             questions_asrs, range(len(questions_asrs)), answers_likert, self.next_screen)
-        
-        p9_command = functools.partial(do_likert, "spacebar", "", ["How often was this the reason for using the spacebar?"], [0], answers_likert, self.next_screen)
 
-        p8_command = functools.partial(do_q3, text="Did you find yourself using the spacebar function when your attention drifted from the text?", yes_command=p9_command, no_command=p10_command)
+        p10_command = functools.partial(self.do_short_answer, "In 2-5 sentences, please describe where you mind wandered to.", "QMW", "QMW_5", text_id=None, next_command=p11_command)
 
-        qualitative_questions45 = [[4, "If you mind wandered, where were your thoughts?"],
-            [5, "Were you aware of your mind wandering before we asked you?"]]
-        next_command = p8_command
-        for number, question in qualitative_questions45[::-1]:
-            next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
-        p7_command = next_command
+        p9_command = functools.partial(do_yes_no, text="Were you aware of your mind wandering in the scrolling task before we asked you about it?", question_idx=3, yes_command=p10_command, no_command=p10_command)
 
-        p6_command = functools.partial(do_q3, text="Did you notice yourself mind wandering?", yes_command=p7_command, no_command=p8_command)
+        p8_command = functools.partial(do_yes_no, text="Did you notice your mind wandering?", question_idx=2, yes_command=p9_command, no_command=p11_command)
 
-        qualitative_questions12 = [[1, "What was your focus like during the reading task?"],
-                [2, "What were your thoughts during the task?"]]
-        next_command = p6_command
-        for number, question in qualitative_questions12[::-1]:
-            next_command = functools.partial(self.do_short_answer, question, "QMW", "QMW_%d" % number, text_id=None, next_command=next_command)
-        p5_command = next_command
+        p7_command = functools.partial(do_likert, "QMW", "", ["How often did you use the spacebar function when your attention had drifted from the text?"], [1], answers_likert, p8_command)
+
+        p6_command = functools.partial(do_yes_no, text="When reading the scrolling text, did you find yourself using the spacebar function when your attention drifted from the text?", question_idx=0, yes_command=p7_command, no_command=p8_command)
+
+        p5_command = functools.partial(self.do_simple_next, "We would now like to hear about your experience of the reading task with scrolling text.", p6_command)
 
         p4_command = functools.partial(do_likert, "4FMW_3", instructions_likert, 
             questions_4fmw3, range(len(questions_4fmw1)+len(questions_4fmw2), len(questions_4fmw1)+len(questions_4fmw2)+len(questions_4fmw3)), answers_likert, p5_command)
@@ -967,8 +968,9 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             questions_4fmw2, range(len(questions_4fmw1), len(questions_4fmw1) + len(questions_4fmw2)), answers_likert, p4_command)
         p2_command = functools.partial(do_likert, "4FMW_1", instructions_likert, 
             questions_4fmw1, range(len(questions_4fmw1)), answers_likert, p3_command)
-        p1_command = functools.partial(do_likert, "4FMW_internal", instructions_internal, questions_internal, [1], answers_internal, p2_command)
-        p1_command()
+        p1_command = functools.partial(do_likert, "4FMW_internal", "", questions_internal, [0], answers_internal, p2_command)
+        p0_command = functools.partial(self.do_simple_next, initial_instructions, p1_command)
+        p0_command()
 
 
     def run_debriefing(self):
