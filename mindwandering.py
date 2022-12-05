@@ -158,10 +158,9 @@ class MindWandering:
         # Determine the maximum number of lines that can fit on one screen
         lines_per_screen = 8 # double-spaced lines
         text_height = 0
-        text_width = None
         while text_height < self.screen_height - 100:
             lines_per_screen += 1
-            text_width, text_height = get_text_image_size("\n\n".join(["M" * self.max_chars_per_line] * lines_per_screen), font)
+            text_width, text_height = get_text_image_size("\n\n".join(["k" * self.max_chars_per_line] * lines_per_screen), font)
         lines_per_screen -= 1
         print ("lines per screen:", lines_per_screen)
 
@@ -182,7 +181,7 @@ class MindWandering:
                 pages = []
                 for start_line in range(0, line_count, lines_per_screen):
                     wrapped_text = "\n\n".join(lines[start_line: start_line + lines_per_screen])
-                    page_rendered_image = RenderedImage(wrapped_text, font, image_width=text_width, image_height=text_height)
+                    page_rendered_image = RenderedImage(wrapped_text, font, image_width=rendered_image.image_width, image_height=text_height)
                     pages.append(page_rendered_image)
                 self.rendered_texts_still[textid] = pages
         print ("done preparing texts")
@@ -589,7 +588,7 @@ To begin, click next.''']
             instructions.pack(pady=10)
 
             paginated_canvas = PaginatedCanvas(self.main_frame, self.rendered_texts_still[main_text_id])
-            paginated_canvas.pack(fill=BOTH)
+            paginated_canvas.pack()
 
             def do_next():
                 self.write_csv_row(action="next", text_format="still", text=main_text_id, page="still_text_pg%d" % (paginated_canvas.current_page + 1))
