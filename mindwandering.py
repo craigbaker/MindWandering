@@ -932,7 +932,9 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
 
         thanks = '''Thank you for completing the survey.
 
-In the study today, you read two chapters of a Bill Bryson book and completed questions regarding the task and attention questionnaires. We conducted this study to assess comprehension and mind wandering when reading text. In particular we are interested in the differences between scrolling text and static text. We appreciate you giving your time and if you have any questions please contact us.'''
+In the study today, you read two chapters of a Bill Bryson book and completed questions regarding the task and attention questionnaires. We conducted this study to assess comprehension and mind wandering when reading text. In particular we are interested in the differences between scrolling text and static text. We appreciate you giving your time and if you have any questions please contact us.
+
+Please let the researcher know you are finished.'''
 
         def do_thanks():
             self.clear_main_frame()
