@@ -622,7 +622,19 @@ To begin, click next.''']
         label = Label(self.main_frame, text="5 Minute Break")
         label.pack()
 
-        next_button = Button(self.main_frame, text="Next", command=self.next_screen)
+        still_here = True
+        def do_next():
+            still_here = False
+            self.next_screen()
+
+        def do_next_if_still_here():
+            # don't move on if Next has already been clicked
+            if still_here:
+                self.next_screen()
+
+        self.main_frame.after(1 * 60 * 1000, do_next_if_still_here)
+
+        next_button = Button(self.main_frame, text="Next", command=do_next)
         next_button.pack(padx=100, pady=50)
 
 
