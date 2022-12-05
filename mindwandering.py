@@ -1248,10 +1248,10 @@ class ScrollingCanvas:
         if self.n % 100 == 50:
             print ("speed:", self.speed, self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
 
-        if mean_delay > self.frame_t / 2:
+        if mean_delay > self.frame_t * 0.75:
             self.pixel_skip += 1
             self.set_rate()
-        elif self.pixel_skip > 1 and mean_delay < self.frame_t / 10:
+        elif self.pixel_skip > 1 and mean_delay < self.frame_t * 0.5:
             self.pixel_skip -= 1
             self.set_rate()
         
