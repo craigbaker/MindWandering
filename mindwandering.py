@@ -38,7 +38,7 @@ class MindWandering:
     def __init__(self):
         self.small_screen = False
         window_title = "Reading Application"
-        self.speed_options = [200, 216, 248, 280, 296, 312, 328] # wpm
+        self.speed_options = [180, 200, 216, 260, 296, 312, 328, 500] # wpm
         if self.small_screen:
             self.image_width = 1200
             self.screen_height = 600
@@ -418,7 +418,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=3)
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=len(self.speed_options) // 2)
             self.scrolling_canvas.pack()
 
             def do_select():
@@ -436,6 +436,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             slider.pack(pady=20)
             '''
 
+            sb = ttk.Progressbar(self.main_frame, orient="horizontal", mode="indeterminate", length=280)
+            sb.pack(pady=10)
+
             buttonframe = Frame(self.main_frame)
             left_button = self.make_arrow_button("left", buttonframe, self.scrolling_canvas)
             select_button = Button(buttonframe, text="Select", command=do_select)
@@ -443,6 +446,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             right_button = self.make_arrow_button("right", buttonframe, self.scrolling_canvas)
             buttonframe.pack(pady=10)
             self.scrolling_canvas.set_arrow_buttons(left_button, right_button)
+            self.scrolling_canvas.set_speed_bar(sb)
 
             self.scrolling_canvas.do_scroll()
 
@@ -1002,6 +1006,7 @@ class RenderedImage:
         # get the number of words per vertical pixel
         word_count = len(wrapped_text.replace("\n", " ").replace("  ", " ").split())
         self.words_per_vpixel = word_count / image_height
+        #print (word_count, self.words_per_vpixel, image_height, wrapped_text[:10])
 
         if screen_height is not None:
             # the top of the text starts at the center of the screen (.5), and the end
@@ -1095,10 +1100,21 @@ class ScrollingCanvas:
 
             self.recent_delays = []
             self.arrow_buttons = None
+            self.sb = None
 
     
     def set_arrow_buttons(self, left_button, right_button):
         self.arrow_buttons = [left_button, right_button]
+
+    
+    def set_speed_bar(self, sb):
+        self.sb = sb
+        self.update_speed_bar()
+
+    
+    def update_speed_bar(self):
+        if self.sb is not None:
+            self.sb["value"] = 100 * (self.speed_selection_idx / (len(self.speed_options) - 1))
     
 
     def pack(self, *args, **kwargs):
@@ -1124,7 +1140,7 @@ class ScrollingCanvas:
         frame_delay = min(frame_delay, self.frame_t)
         self.recent_delays.append(frame_delay)
         mean_delay = sum(self.recent_delays) / len(self.recent_delays)
-        print (self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
+        #print (self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
         if len(self.recent_delays) > 10:
             self.recent_delays = self.recent_delays[-10:]
         self.frame_start = frame_end
@@ -1154,6 +1170,9 @@ class ScrollingCanvas:
             if self.arrow_buttons is not None:
                 self.arrow_buttons[1]["state"] = "disabled"
 
+        if self.sb is not None:
+            self.update_speed_bar()
+
     
     def decrease_scrolling_speed(self):
         assert self.speed_options is not None
@@ -1167,6 +1186,9 @@ class ScrollingCanvas:
         else:
             if self.arrow_buttons is not None:
                 self.arrow_buttons[0]["state"] = "disabled"
+
+        if self.sb is not None:
+            self.update_speed_bar()
 
 
     def set_rate(self):
