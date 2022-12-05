@@ -491,16 +491,58 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
 
 Please read each text in full to be included in the study. A break will be available to you after completing the first text.''',
                 "It is possible that your mind may wander from the text, this is understandable, try to be aware of when it occurs and return your attention to the text.",
-                "If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.",
-                '''After you have finished reading the text, we will ask you some questions related to what you read.
+                '''If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.
 
-To begin, click next.'''
+On the next page we would like you to practice using these keys.''',
             ]
 
-            command = do_task
+            final_instruction = '''After you have finished reading the text, we will ask you some questions related to what you read.
+
+To begin, click next.'''
+
+            final_instruction_command = functools.partial(self.do_simple_next, final_instruction, do_task)
+            command = functools.partial(do_pause_practice, final_instruction_command)
             for inst in instructions[::-1]:
                 command = functools.partial(self.do_simple_next, inst, command)
             command()
+
+
+        def do_pause_practice(next_command):
+            self.clear_main_frame()
+            instructions = Label(self.main_frame, text='Press the space bar to pause the text and "C" to continue, Try this three times before moving on')
+            instructions.pack(pady=10)
+            
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=[self.selected_speed])
+
+            def pause_fn(event):
+                if not self.scrolling_canvas.paused:
+                    self.scrolling_canvas.pause()
+
+            unpause_count = 0
+            def unpause_fn(event):
+                nonlocal unpause_count
+                if self.scrolling_canvas.paused:
+                    unpause_count += 1
+                    self.scrolling_canvas.unpause()
+
+            self.root.bind("<space>", pause_fn)
+            self.root.bind("c", unpause_fn)
+
+            self.scrolling_canvas.pack()
+            self.scrolling_canvas.do_scroll()
+
+            def do_next_command():
+                if unpause_count < 3:
+                    messagebox.showerror(title="Error", message="Please try pausing and unpausing at least 3 times to continue.")
+                else:
+                    next_command()
+
+            def show_next_button():
+                next_button = Button(self.main_frame, text="Next", command=do_next_command)
+                next_button.pack(pady=50, padx=20)
+
+            practice_time = 10
+            self.root.after(practice_time * 1000, show_next_button)
 
 
         def do_task():
