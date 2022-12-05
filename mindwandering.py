@@ -42,7 +42,7 @@ class MindWandering:
         if self.small_screen:
             self.image_width = 1200
             self.screen_height = 600
-            fontsize = 18
+            fontsize = 16
         else:
             self.image_width = 2000
             self.screen_height = 1100
@@ -1242,11 +1242,12 @@ class ScrollingCanvas:
         frame_delay = min(frame_delay, self.frame_t)
         self.recent_delays.append(frame_delay)
         mean_delay = sum(self.recent_delays) / len(self.recent_delays)
-        #print (self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
         if len(self.recent_delays) > 10:
             self.recent_delays = self.recent_delays[-10:]
         self.frame_start = frame_end
-        #print ("elapsed:", frame_elapsed, "delay:", frame_delay, "frame_t:", self.frame_t, "n:", self.n / self.image_height)
+        
+        if self.n % 100 == 50:
+            print ("speed:", self.speed, self.n, frame_end, "mean delay:", mean_delay, "frame_t:", self.frame_t, "pixel skip:", self.pixel_skip)
 
         if mean_delay > self.frame_t / 2:
             self.pixel_skip += 1
