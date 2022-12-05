@@ -95,6 +95,7 @@ class MindWandering:
         ]
 
         self.scrolling_canvas = None
+        self.selected_speed = None
         self.total_paused_time = 0. # total time spent with the experiment paused
         menubar = Menu(self.root)
         filemenu = Menu(menubar, tearoff=False)
@@ -418,7 +419,12 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             instructions = Label(self.main_frame, text="Find your preferred speed by pressing the left or right arrow. When you have arrived at your preferred speed press SELECT.")
             instructions.pack(pady=10)
 
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=len(self.speed_options) // 2)
+            if self.selected_speed is None:
+                speed_selection_idx = len(self.speed_options) // 2
+            else:
+                speed_selection_idx = self.speed_options.index(self.selected_speed)
+
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=speed_selection_idx)
             self.scrolling_canvas.pack()
 
             def do_select():
