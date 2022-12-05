@@ -116,6 +116,8 @@ class MindWandering:
     def do_pause_experiment(self):
         pause_start_t = time.perf_counter()
 
+        self.write_csv_row(action="pause_experiment")
+
         if self.scrolling_canvas is not None:
             self.scrolling_canvas.pause()
 
@@ -138,6 +140,8 @@ class MindWandering:
 
             if self.scrolling_canvas is not None:
                 self.scrolling_canvas.unpause()
+            
+            self.write_csv_row(action="unpause_experiment")
         
         button = Button(window, text="Unpause", command=do_unpause)
         button.pack(padx=30, pady=30)
@@ -497,12 +501,14 @@ To begin, click next.'''
             self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
 
             def pause_fn(event):
-                self.scrolling_canvas.pause()
-                self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+                if not self.scrolling_canvas.paused:
+                    self.scrolling_canvas.pause()
+                    self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
             def unpause_fn(event):
-                self.scrolling_canvas.unpause()
-                self.write_csv_row(action="unpause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+                if self.scrolling_canvas.paused:
+                    self.scrolling_canvas.unpause()
+                    self.write_csv_row(action="unpause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
             self.root.bind("<space>", pause_fn)
             self.root.bind("c", unpause_fn)
