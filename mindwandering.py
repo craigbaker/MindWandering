@@ -442,7 +442,7 @@ To begin these tasks, click Next.''']
 
         def do_introduction():
             intro = '''
-The text you will read, will be scrolling from the bottom to the top of the page.
+The text you will now read, will be scrolling from the bottom to the top of the page.
 
 Before you begin, you will set the speed of the scrolling text. Try to choose the speed that would be most comfortable to continuously read for the duration of the task.'''
             self.do_simple_next(intro, do_select)
@@ -521,9 +521,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             self.clear_main_frame()
             self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
-            instructions = ['''Thank you for selecting your speed, you will now begin the reading tasks.
+            instructions = ['''Thank you for selecting your speed, you will now begin the scrolling text reading task.
 
-Please read each text in full to be included in the study. A break will be available to you after completing the first text.''',
+Please read the text in full to be included in the study. A break will be available to you after completing the first text.''',
                 "It is possible that your mind may wander from the text, this is understandable, try to be aware of when it occurs and return your attention to the text.",
                 '''If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.
 
@@ -653,9 +653,11 @@ To begin, click next.'''
         def do_instructions():
             self.clear_main_frame()
 
-            instructions = ["The text you will read will be displayed on the screen, page by page. You can progress through the text by clicking NEXT.",
+            instructions = ["The text you will now read will be displayed on the screen, page by page. You can progress through the text by clicking NEXT.",
                 "It is possible that your mind may wander from the text, this is understandable, anytime this occurs, click the “mind wandered” button and then return your attention to the text.",
-                '''After you have finished reading the text, we will ask you some questions related to what you read.
+                '''Please read the text in full to be included in the study. Alert the researcher if you need anything.
+
+After you have finished reading the text, we will ask you some questions related to what you read.
 
 To begin, click next.''']
 
@@ -701,8 +703,10 @@ To begin, click next.''']
         Wait for the break to be over
         '''
         label = Label(self.main_frame, text='''Thank you for completing the first task. Before you begin task 2, please take a 5-minute break.
+
+If you need anything please alert the researcher.
     
-    When ready to begin task 2, click Next.''')
+When ready to begin task 2, click Next.''')
         label.pack()
 
         still_here = True
@@ -804,7 +808,7 @@ To begin, click next.''']
         max_words = 50
         short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
 
-Please use the textbox below to summarize the key ideas of the text in 2-4 sentences (maximum %d words).''' % max_words
+Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.'''
 
         p2_command = functools.partial(do_multiple_choice, self.next_screen)
         p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command, max_words)
