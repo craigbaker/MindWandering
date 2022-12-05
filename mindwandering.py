@@ -6,7 +6,7 @@
 #
 
 import sys
-#stderr_f = open("/tmp/mindwandering_stderr.txt", "w") # find launch bugs
+#stderr_f = open("/tmp/mindwandering_stderr.txt", "w", buffering=1) # find launch bugs
 #sys.stdout = stderr_f
 #sys.stderr = stderr_f
 
