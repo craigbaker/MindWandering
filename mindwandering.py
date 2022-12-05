@@ -429,7 +429,8 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             def do_select():
                 self.selected_speed = self.scrolling_canvas.speed
                 self.write_csv_row(action="select", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
-                do_confirm()
+                self.do_simple_next("We would now like you to briefly read this example text to confirm this is your preferred speed, then follow the prompts.",
+                    do_confirm)
 
             '''
             def set_value(value):
