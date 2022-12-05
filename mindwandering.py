@@ -619,7 +619,9 @@ To begin, click next.''']
         '''
         Wait for the break to be over
         '''
-        label = Label(self.main_frame, text="5 Minute Break")
+        label = Label(self.main_frame, text='''Thank you for completing the first task. Before you begin task 2, please take a 5-minute break.
+    
+    When ready to begin task 2, click Next.''')
         label.pack()
 
         still_here = True
