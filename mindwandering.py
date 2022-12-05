@@ -463,8 +463,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             def do_select():
                 self.selected_speed = self.scrolling_canvas.speed
                 self.write_csv_row(action="select", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
+                command = functools.partial(self.do_simple_next, "If it is not comfortable to continuously read at this speed, select RESET. Otherwise choose NEXT.", do_confirm)
                 self.do_simple_next("We would now like you to briefly read this example text to confirm this is your preferred speed, then follow the prompts.",
-                    do_confirm)
+                    command)
 
             '''
             def set_value(value):
@@ -521,23 +522,27 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             self.clear_main_frame()
             self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
-            instructions = ['''Thank you for selecting your speed, you will now begin the scrolling text reading task.
+            first_instruction = '''Thank you for selecting your speed, you will now begin the reading tasks.
 
-Please read the text in full to be included in the study. A break will be available to you after completing the first text.''',
+If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.
+
+On the next page we would like you to practice using these keys.
+'''
+            remaining_instructions = ['''Thank you, you will now begin the scrolling text reading task.
+
+Please read the text in full to be included in the study. Alert the researcher if you need anything.''',
                 "It is possible that your mind may wander from the text, this is understandable, try to be aware of when it occurs and return your attention to the text.",
-                '''If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.
-
-On the next page we would like you to practice using these keys.''',
+                '''After you have finished reading the text, we will ask you some questions related to what you read. 
+  
+To begin, click next.
+'''
             ]
 
-            final_instruction = '''After you have finished reading the text, we will ask you some questions related to what you read.
-
-To begin, click next.'''
-
-            final_instruction_command = functools.partial(self.do_simple_next, final_instruction, do_task)
-            command = functools.partial(do_pause_practice, final_instruction_command)
-            for inst in instructions[::-1]:
+            command = do_task
+            for inst in remaining_instructions[::-1]:
                 command = functools.partial(self.do_simple_next, inst, command)
+            command = functools.partial(do_pause_practice, command)
+            command = functools.partial(self.do_simple_next, first_instruction, command)
             command()
 
 
@@ -553,36 +558,19 @@ To begin, click next.'''
                     self.scrolling_canvas.pause()
 
             unpause_count = 0
-            next_button_shown = False
             def unpause_fn(event):
                 nonlocal unpause_count
                 if self.scrolling_canvas.paused:
                     unpause_count += 1
                     self.scrolling_canvas.unpause()
                     if unpause_count >= 3:
-                        show_next_button()
+                        next_command()
 
             self.root.bind("<space>", pause_fn)
             self.root.bind("c", unpause_fn)
 
             self.scrolling_canvas.pack()
             self.scrolling_canvas.do_scroll()
-
-            def do_next_command():
-                if unpause_count < 3:
-                    messagebox.showerror(title="Error", message="Please try pausing and unpausing at least 3 times to continue.")
-                else:
-                    next_command()
-
-            def show_next_button():
-                nonlocal next_button_shown
-                if not next_button_shown:
-                    next_button = Button(self.main_frame, text="Next", command=do_next_command)
-                    next_button.pack(pady=50, padx=20)
-                    next_button_shown = True
-
-            practice_time = 10
-            self.root.after(practice_time * 1000, show_next_button)
 
 
         def do_task():
