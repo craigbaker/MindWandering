@@ -97,13 +97,16 @@ class MindWandering:
         self.scrolling_canvas = None
         self.selected_speed = None
         self.total_paused_time = 0. # total time spent with the experiment paused
+
+        ''' # the File menu sometimes freezes on macOS 10.15, so use command-keys instead
         menubar = Menu(self.root)
         filemenu = Menu(menubar, tearoff=False)
         filemenu.add_command(label="Pause", command=self.do_pause_experiment)
         filemenu.add_command(label="End experiment", command=self.do_quit)
         menubar.add_cascade(label="File", menu=filemenu)
         self.root.config(menu=menubar)
-        
+        '''
+
         self.next_screen()
         self.root.mainloop()
 
