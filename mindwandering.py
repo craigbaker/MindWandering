@@ -41,8 +41,8 @@ class MindWandering:
         self.speed_options = [180, 200, 216, 260, 328, 400, 500, 550] # wpm
         if self.small_screen:
             self.image_width = 1200
-            self.screen_height = 600
-            fontsize = 16
+            self.screen_height = 500
+            fontsize = 14
         else:
             self.image_width = 2000
             self.screen_height = 1100
