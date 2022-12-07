@@ -216,7 +216,7 @@ class MindWandering:
         next_button.pack(padx=100, pady=50)
 
 
-    def do_short_answer(self, instructions, page, question, text_id, next_command, max_words=None):
+    def do_short_answer(self, instructions, page, question, text_id, next_command, max_chars=250):
         '''
         Show the instructions, with a mandatory textbox
         '''
@@ -250,13 +250,12 @@ class MindWandering:
 
         # Enforce the maximum number of words
         def modified_fn(event):
-            if max_words is not None:
-                text = textbox.get("0.0", "end").strip()
-                words = text.split()
-                if len(words) > max_words:
-                    words = words[:max_words]
+            if max_chars is not None:
+                text = textbox.get("0.0", "end")
+                if len(text) >= max_chars:
+                    text = text[:max_chars-2]
                     textbox.delete(1.0, END)
-                    textbox.insert(END, " ".join(words))
+                    textbox.insert(END, text)
 
         textbox = ModifiedText(self.main_frame, modified_fn=modified_fn, font=self.default_font, height=4)
 
@@ -801,13 +800,13 @@ When ready to begin task 2, click Next.''')
             next_button = Button(right_frame, text="Next", command=do_next)
             next_button.pack(side=BOTTOM, anchor=E, pady=50, padx=20)
 
-        max_words = 50
+        max_chars = 250
 
         focus_questions = [[1, "What was your focus like during this reading task?"],
                 [2, "In 1-2 sentences, what were your thoughts during the task? "]]
         next_command = self.next_screen
         for number, question in focus_questions[::-1]:
-            next_command = functools.partial(self.do_short_answer, question, "comprehension_focus_SA", "comprehension_focus_%d" % number, text_id=text_id, next_command=next_command, max_words=max_words)
+            next_command = functools.partial(self.do_short_answer, question, "comprehension_focus_SA", "comprehension_focus_%d" % number, text_id=text_id, next_command=next_command, max_chars=max_chars)
         focus_command = next_command
 
         short_answer_instructions = '''Thank you for completing this reading task. Please respond to the following questions about the text.
@@ -815,7 +814,7 @@ When ready to begin task 2, click Next.''')
 Please use the textbox below to summarize the key ideas of the text in 2-4 sentences.'''
 
         p2_command = functools.partial(do_multiple_choice, focus_command)
-        p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command, max_words)
+        p1_command = functools.partial(self.do_short_answer, short_answer_instructions, "comprehension_test_SA", "a_question_SA", text_id, p2_command, max_chars)
 
         p1_command()
 
