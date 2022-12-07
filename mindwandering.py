@@ -571,6 +571,8 @@ To begin, click next.
                     unpause_count += 1
                     self.scrolling_canvas.unpause()
                     if unpause_count >= 3:
+                        self.root.unbind("<space>")
+                        self.root.unbind("c")
                         next_command()
 
             self.root.bind("<space>", pause_fn)
@@ -584,8 +586,13 @@ To begin, click next.
             self.clear_main_frame()
             instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
             instructions.pack(pady=10)
+
+            def next_command():
+                self.root.unbind("<space>")
+                self.root.unbind("c")
+                self.next_screen()
             
-            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.screen_height, done_command=self.next_screen, speed_options=[self.selected_speed])
+            self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.screen_height, done_command=next_command, speed_options=[self.selected_speed])
 
             def pause_fn(event):
                 if not self.scrolling_canvas.paused:
