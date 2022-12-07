@@ -346,6 +346,12 @@ class MindWandering:
         testtime_entry = Entry(testtime_frame, textvariable=testtime_var)
         testtime_entry.grid(row=1, column=0, sticky=W, padx=20)
 
+        shortcut_label = Label(self.main_frame, font=self.bold_font, text="Keyboard shortcuts: ⌘P: Pause experiment ⌘X: End experiment")
+        shortcut_label.pack(anchor=W, pady=30)
+        for side in "LR":
+            self.root.bind("<Meta_%s><p>" % side, lambda event: self.do_pause_experiment())
+            self.root.bind("<Meta_%s><x>" % side, lambda event: self.do_quit())
+
         def finish_and_next():
             self.experiment_start_t = time.perf_counter()
             self.user_id = userid_var.get()
