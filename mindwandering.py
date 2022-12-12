@@ -39,7 +39,7 @@ class MindWandering:
     def __init__(self):
         self.small_screen = False
         window_title = "Reading Application"
-        self.speed_options = [180, 200, 216, 260, 328, 400, 500, 550, 600, 700, 800, 900] # wpm
+        self.speed_options = [180, 200, 216, 260, 328, 400, 500, 550, 600, 700, 800, 850] # wpm
         if self.small_screen:
             self.image_width = 1200
             self.screen_height = 500
