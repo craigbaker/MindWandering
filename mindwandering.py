@@ -450,7 +450,7 @@ To begin these tasks, click Next.''']
 
         def do_introduction():
             intro = '''
-The text you will now read, will be scrolling from the bottom to the top of the page.
+The text you will now read, will be scrolling from the bottom to the top of the page. During the task, you will be able to pause the moving text if needed.
 
 Before you begin, you will set the speed of the scrolling text. Try to choose the speed that would be most comfortable to continuously read for the duration of the task.'''
             self.do_simple_next(intro, do_select)
@@ -531,9 +531,9 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
 
             first_instruction = '''Thank you for selecting your speed, you will now begin the reading tasks.
 
-If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the “C” button.
+If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. Press the SPACEBAR button again to resume.
 
-On the next page we would like you to practice using these keys.
+On the next page we would like you to practice using the spacebar.
 '''
             remaining_instructions = ['''Thank you, you will now begin the scrolling text reading task.
 
@@ -555,28 +555,24 @@ To begin, click next.
 
         def do_pause_practice(next_command):
             self.clear_main_frame()
-            instructions = Label(self.main_frame, text='Press the space bar to pause the text and "C" to continue, Try this three times before moving on')
+            instructions = Label(self.main_frame, text="Press the SPACEBAR to pause the text and again to resume. Try this three times before moving on")
             instructions.pack(pady=10)
             
             self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=[self.selected_speed])
 
-            def pause_fn(event):
-                if not self.scrolling_canvas.paused:
-                    self.scrolling_canvas.pause()
-
             unpause_count = 0
-            def unpause_fn(event):
+            def pause_fn(event):
                 nonlocal unpause_count
                 if self.scrolling_canvas.paused:
                     unpause_count += 1
                     self.scrolling_canvas.unpause()
                     if unpause_count >= 3:
                         self.root.unbind("<space>")
-                        self.root.unbind("c")
                         next_command()
+                else:
+                    self.scrolling_canvas.pause()
 
             self.root.bind("<space>", pause_fn)
-            self.root.bind("c", unpause_fn)
 
             self.scrolling_canvas.pack()
             self.scrolling_canvas.do_scroll()
@@ -584,28 +580,24 @@ To begin, click next.
 
         def do_task():
             self.clear_main_frame()
-            instructions = Label(self.main_frame, text='If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. To continue, press the "C" button.')
+            instructions = Label(self.main_frame, text="If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. Press the SPACEBAR button again to resume.")
             instructions.pack(pady=10)
 
             def next_command():
                 self.root.unbind("<space>")
-                self.root.unbind("c")
                 self.next_screen()
             
             self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling[main_text_id], self.screen_height, done_command=next_command, speed_options=[self.selected_speed])
 
             def pause_fn(event):
-                if not self.scrolling_canvas.paused:
-                    self.scrolling_canvas.pause()
-                    self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
-
-            def unpause_fn(event):
                 if self.scrolling_canvas.paused:
                     self.scrolling_canvas.unpause()
                     self.write_csv_row(action="unpause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
+                else:
+                    self.scrolling_canvas.pause()
+                    self.write_csv_row(action="pause", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
 
             self.root.bind("<space>", pause_fn)
-            self.root.bind("c", unpause_fn)
 
             self.scrolling_canvas.pack()
             self.scrolling_canvas.do_scroll()
