@@ -38,15 +38,15 @@ class MindWandering:
     def __init__(self):
         self.small_screen = False
         window_title = "Reading Application"
-        self.speed_options = [180, 200, 216, 260, 328, 400, 500, 550, 600, 700] # wpm
+        self.speed_options = [180, 200, 216, 260, 328, 400, 500, 550, 600, 700, 800, 900] # wpm
         if self.small_screen:
             self.image_width = 1200
             self.screen_height = 500
             fontsize = 14
         else:
             self.image_width = 2000
-            self.screen_height = 1100
-            fontsize = 24
+            self.screen_height = 700
+            fontsize = 20
 
         fontpath = os.path.join(app_dir, "fonts/Merriweather/Merriweather-Regular.ttf")
         self.max_chars_per_line = 96
