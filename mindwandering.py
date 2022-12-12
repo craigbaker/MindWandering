@@ -444,7 +444,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 speed_selection_idx = self.speed_options.index(self.selected_speed)
 
             self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option1"], self.screen_height, speed_options=self.speed_options, speed_selection_idx=speed_selection_idx)
-            self.scrolling_canvas.pack()
+            self.scrolling_canvas.pack(pady=50)
 
             def do_select():
                 self.selected_speed = self.scrolling_canvas.speed
@@ -493,7 +493,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
                 buttonframe.pack(pady=10)
             
             self.scrolling_canvas = ScrollingCanvas(self.main_frame, self.rendered_texts_scrolling["option2"], self.screen_height, speed_options=[self.selected_speed])
-            self.scrolling_canvas.pack()
+            self.scrolling_canvas.pack(pady=50)
 
             self.scrolling_canvas.do_scroll()
             confirm_wait_time = self.scrolling_testtime * 1000
@@ -552,7 +552,7 @@ To begin, click next.
 
             self.root.bind("<space>", pause_fn)
 
-            self.scrolling_canvas.pack()
+            self.scrolling_canvas.pack(pady=50)
             self.scrolling_canvas.do_scroll()
 
 
@@ -577,7 +577,7 @@ To begin, click next.
 
             self.root.bind("<space>", pause_fn)
 
-            self.scrolling_canvas.pack()
+            self.scrolling_canvas.pack(pady=50)
             self.scrolling_canvas.do_scroll()
 
             self.write_csv_row(action="video_start", text_format="scroll", text=main_text_id, page="scrolling_video", speed=str(self.selected_speed))
@@ -644,7 +644,7 @@ To begin, click next.''']
             instructions.pack(pady=10)
 
             paginated_canvas = PaginatedCanvas(self.main_frame, self.rendered_texts_still[main_text_id])
-            paginated_canvas.pack()
+            paginated_canvas.pack(pady=50)
 
             def do_next():
                 self.write_csv_row(action="next", text_format="still", text=main_text_id, page="still_text_pg%d" % (paginated_canvas.current_page + 1))
