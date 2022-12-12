@@ -19,6 +19,7 @@ import datetime
 import random
 import functools
 import copy
+import re
 
 from tkinter import *
 from tkinter import ttk
@@ -224,29 +225,6 @@ class MindWandering:
 
         instructions = Label(self.main_frame, text=instructions)
         instructions.pack(pady=10)
-
-        class ModifiedText(Text):
-            # Calls modified_fn every time text is modified
-            def __init__(self, *args, modified_fn=None, **kwargs):
-                Text.__init__(self, *args, **kwargs)
-                self.modified_fn = modified_fn
-                self.clearModifiedFlag()
-                self.bind_all('<<Modified>>', self._beenModified)
-
-            def _beenModified(self, event=None):
-                if self._resetting_modified_flag: return
-                self.clearModifiedFlag()
-                self.modified_fn(event)
-
-            def clearModifiedFlag(self):
-                self._resetting_modified_flag = True
-                try:
-                    # Set 'modified' to 0.  This will also trigger the <<Modified>>
-                    # virtual event which is why we need the sentinel.
-                    self.tk.call(self._w, 'edit', 'modified', 0)
-                finally:
-                    # Clean the sentinel.
-                    self._resetting_modified_flag = False
 
         # Enforce the maximum number of words
         def modified_fn(event):
@@ -1013,6 +991,24 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
             answer_menu["menu"].config(font=self.default_font)
             answer_menu.grid(row=4, column=2, sticky=W)
 
+            label = Label(self.main_frame, text="What is your current Grade Point Average?")
+            label.grid(row=5, column=0, sticky=W)
+            def modified_fn(event):
+                original_text = q5_textbox.get("0.0", "end").strip()
+                text = re.sub("[^0123456789\.]", "", original_text) # delete all but 0-9 and .
+                if len(text) > 0:
+                    # allow just one dot, one units digit, and up to 3 decimal places
+                    if "." in text:
+                        idx = text.find(".")
+                        text = text[:idx+1][:2] + text[idx+1:].replace(".", "")[:3]
+                    else:
+                        text = text[0]
+                if text != original_text:
+                    q5_textbox.delete(1.0, END)
+                    q5_textbox.insert(END, text)
+            q5_textbox = ModifiedText(self.main_frame, modified_fn=modified_fn, font=self.default_font, height=1, width=5)
+            q5_textbox.grid(row=5, column=2, sticky=W)
+
             def do_next():
                 for do_write in False, True:
                     # only write to the CSV after checking all answers
@@ -1024,10 +1020,16 @@ Please use the textbox below to summarize the key ideas of the text in 2-4 sente
                         else:
                             messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
                             return
+                q5_answer = q5_textbox.get("0.0", "end").strip()
+                if len(q5_answer) == 0:
+                    messagebox.showerror(title="Error", message="Please select an answer for each question to continue.")
+                    return
+                else:
+                    self.write_csv_row(action=q5_answer, question="debriefing_5", page="debriefing")
                 next_command()
 
             next_button = Button(self.main_frame, text="Next", command=do_next)
-            next_button.grid(row=5, column=0, sticky=W)
+            next_button.grid(row=6, column=0, sticky=W)
 
             self.root.update() # otherwise the menus don't initially appear...
 
@@ -1072,6 +1074,32 @@ Please let the researcher know you are finished.'''
         #rb.config(image=self.radio_button_unchecked_img)
 
         return rb
+
+
+class ModifiedText(Text):
+    '''
+    A Text widget that calls modified_fn every time text is modified
+    '''
+    def __init__(self, *args, modified_fn=None, **kwargs):
+        Text.__init__(self, *args, **kwargs)
+        self.modified_fn = modified_fn
+        self.clearModifiedFlag()
+        self.bind_all('<<Modified>>', self._beenModified)
+
+    def _beenModified(self, event=None):
+        if self._resetting_modified_flag: return
+        self.clearModifiedFlag()
+        self.modified_fn(event)
+
+    def clearModifiedFlag(self):
+        self._resetting_modified_flag = True
+        try:
+            # Set 'modified' to 0.  This will also trigger the <<Modified>>
+            # virtual event which is why we need the sentinel.
+            self.tk.call(self._w, 'edit', 'modified', 0)
+        finally:
+            # Clean the sentinel.
+            self._resetting_modified_flag = False
 
 
 def wrap_text(text, max_chars_per_line=96):
