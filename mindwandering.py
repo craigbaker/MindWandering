@@ -507,7 +507,7 @@ Before you begin, you will set the speed of the scrolling text. Try to choose th
             self.clear_main_frame()
             self.write_csv_row(action="confirm", text_format="scroll", text=main_text_id, page="speed_select", speed=str(self.selected_speed))
 
-            first_instruction = '''Thank you for selecting your speed, you will now begin the reading tasks.
+            first_instruction = '''Thank you for selecting your speed.
 
 If you need to briefly pause the scrolling text while reading, you can press the SPACEBAR. Press the SPACEBAR button again to resume.
 
